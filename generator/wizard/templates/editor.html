@@ -75,6 +75,43 @@
     .breadcrumb a{color:#90caf9;text-decoration:none}
     .deploy-bar{border-top:1px solid #2d3142;padding-top:10px;margin-top:10px}
     .saved-badge{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:#4caf50;background:#1a2a1a;border:1px solid #4caf50;border-radius:4px;padding:2px 7px}
+    /* ── Vorschau ──────────────────────────────────────────────── */
+    .preview-card{background:#1c1c1e;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto}
+    .preview-section{display:flex;flex-direction:column;gap:6px}
+    .preview-sec-title{font-size:.68rem;color:#666;text-transform:uppercase;letter-spacing:.08em;padding:0 2px}
+    .preview-row{display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .preview-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      border-radius:8px;background:#2c2c2e;border:none;cursor:pointer;color:#e1e1e1;
+      padding:8px 4px;min-height:44px;font-size:.72rem;transition:background .15s;flex:1;max-width:80px}
+    .preview-btn:hover{background:#3a3a3c}
+    .preview-btn i{font-size:1.15rem}
+    .preview-btn span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+    .preview-spacer{flex:1;max-width:80px;min-height:44px}
+    .preview-circlepad,.preview-dpad{position:relative;width:100px;height:100px;flex-shrink:0}
+    .preview-circlepad .pcenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:34px;height:34px;border-radius:50%;background:#2196f3;display:flex;align-items:center;justify-content:center}
+    .preview-circlepad .pring{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;background:#2c2c2e}
+    .pdirBtn{position:absolute;display:flex;align-items:center;justify-content:center;
+      background:none;border:none;color:#aaa;cursor:pointer;font-size:.9rem;width:30px;height:30px}
+    .pdirBtn:hover{color:#fff}
+    .pdirBtn.pup{top:4px;left:50%;transform:translateX(-50%)}
+    .pdirBtn.pdown{bottom:4px;left:50%;transform:translateX(-50%)}
+    .pdirBtn.pleft{left:4px;top:50%;transform:translateY(-50%)}
+    .pdirBtn.pright{right:4px;top:50%;transform:translateY(-50%)}
+    .preview-dpad-cross{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;
+      width:90px;height:90px;gap:2px}
+    .preview-dpad-cross .dc{background:#2c2c2e;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:.85rem;cursor:pointer}
+    .preview-dpad-cross .dc:hover{background:#3a3a3c;color:#fff}
+    .preview-dpad-cross .dc.empty{background:transparent;cursor:default}
+    .preview-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:110px}
+    .preview-numpad .pn{background:#2c2c2e;border-radius:6px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#e1e1e1;cursor:pointer}
+    .preview-numpad .pn:hover{background:#3a3a3c}
+    .preview-vol{display:flex;flex-direction:column;gap:3px;align-items:center;width:48px}
+    .preview-vol .pv{background:#2c2c2e;border-radius:6px;width:100%;height:30px;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#e1e1e1;cursor:pointer}
+    .preview-vol .pv:hover{background:#3a3a3c}
+    .toggle-view{display:flex;gap:0;border:1px solid #3d4156;border-radius:6px;overflow:hidden}
+    .toggle-view button{background:#111318;color:#aaa;border:none;padding:5px 12px;cursor:pointer;font-size:.78rem}
+    .toggle-view button.active{background:#2196f3;color:#fff}
   </style>
 </head>
 <body>
@@ -95,8 +132,12 @@
     </select>
     <span id="saved-indicator" style="display:none" class="saved-badge">✓ Layout gespeichert</span>
     <div class="col-ctrl"><label>Spalten:</label><input type="number" id="grid-cols" value="12" min="1" max="24" onchange="renderCanvas()"></div>
-    <button class="btn btn-secondary" onclick="addSection()">＋ Section</button>
-    <button class="btn btn-secondary" onclick="addRow()">＋ Reihe</button>
+    <div class="toggle-view">
+      <button id="btn-edit" class="active" onclick="setView('edit')">✏️ Bearbeiten</button>
+      <button id="btn-prev" onclick="setView('preview')">👁 Vorschau</button>
+    </div>
+    <button class="btn btn-secondary" id="btn-add-sec" onclick="addSection()">＋ Section</button>
+    <button class="btn btn-secondary" id="btn-add-row" onclick="addRow()">＋ Reihe</button>
   </div>
   <div class="editor-layout">
     <div class="panel">
@@ -661,6 +702,100 @@ function exportLayout(){
     });
   });
   return {rows,custom_actions:acts};
+}
+
+// ── View-Toggle ───────────────────────────────────────────────────────────
+let _viewMode = 'edit';
+function setView(mode) {
+  _viewMode = mode;
+  document.getElementById('btn-edit').classList.toggle('active', mode==='edit');
+  document.getElementById('btn-prev').classList.toggle('active', mode==='preview');
+  document.getElementById('btn-add-sec').style.display = mode==='edit' ? '' : 'none';
+  document.getElementById('btn-add-row').style.display = mode==='edit' ? '' : 'none';
+  if (mode==='preview') renderPreview(); else renderCanvas();
+}
+
+// ── Vorschau rendern ───────────────────────────────────────────────────────
+function renderPreview() {
+  const cv = document.getElementById('canvas');
+  if (!sections.length || sections.every(s=>!s.rows.length)) {
+    cv.innerHTML='<div class="canvas-empty">Kein Layout vorhanden — erst im Bearbeiten-Modus aufbauen.</div>'; return;
+  }
+  const gc = parseInt(document.getElementById('grid-cols').value || 12);
+  const card = document.createElement('div'); card.className='preview-card';
+
+  sections.forEach(sec => {
+    const sd = document.createElement('div'); sd.className='preview-section';
+    if (sec.title) {
+      const tl = document.createElement('div'); tl.className='preview-sec-title';
+      tl.textContent = sec.title; sd.appendChild(tl);
+    }
+    sec.rows.forEach(row => {
+      const rd = document.createElement('div'); rd.className='preview-row';
+      row.cells.forEach(cell => {
+        const colsFrac = (cell.props?.cols||1) / gc;
+        const el = previewCell(cell, colsFrac);
+        rd.appendChild(el);
+      });
+      sd.appendChild(rd);
+    });
+    card.appendChild(sd);
+  });
+  cv.innerHTML=''; cv.appendChild(card);
+}
+
+function previewCell(cell, colsFrac) {
+  const t = cell.type;
+  const w = Math.round(colsFrac * 100);
+
+  if (t === 'spacer') {
+    const el = document.createElement('div'); el.className='preview-spacer';
+    el.style.flexBasis = `calc(${w}% - 6px)`; return el;
+  }
+  if (t === 'circlepad') {
+    const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
+    wrap.innerHTML=`<div class="preview-circlepad">
+      <div class="pring"></div>
+      <button class="pdirBtn pup"><i class="mdi mdi-chevron-up"></i></button>
+      <button class="pdirBtn pdown"><i class="mdi mdi-chevron-down"></i></button>
+      <button class="pdirBtn pleft"><i class="mdi mdi-chevron-left"></i></button>
+      <button class="pdirBtn pright"><i class="mdi mdi-chevron-right"></i></button>
+      <div class="pcenter"><i class="mdi mdi-circle" style="color:#fff;font-size:.8rem"></i></div>
+    </div>`; return wrap;
+  }
+  if (t === 'dpad') {
+    const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
+    wrap.innerHTML=`<div class="preview-dpad-cross">
+      <div class="dc empty"></div><div class="dc"><i class="mdi mdi-chevron-up"></i></div><div class="dc empty"></div>
+      <div class="dc"><i class="mdi mdi-chevron-left"></i></div>
+      <div class="dc"><i class="mdi mdi-circle" style="font-size:.7rem"></i></div>
+      <div class="dc"><i class="mdi mdi-chevron-right"></i></div>
+      <div class="dc empty"></div><div class="dc"><i class="mdi mdi-chevron-down"></i></div><div class="dc empty"></div>
+    </div>`; return wrap;
+  }
+  if (t === 'numpad') {
+    const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
+    const nums = [1,2,3,4,5,6,7,8,9,'','0',''];
+    wrap.innerHTML=`<div class="preview-numpad">${nums.map(n=>n===''?'<div class="pn" style="background:transparent"></div>':`<div class="pn">${n}</div>`).join('')}</div>`;
+    return wrap;
+  }
+  if (t === 'volume') {
+    const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
+    wrap.innerHTML=`<div class="preview-vol">
+      <div class="pv"><i class="mdi mdi-volume-plus"></i></div>
+      <div class="pv"><i class="mdi mdi-volume-mute"></i></div>
+      <div class="pv"><i class="mdi mdi-volume-minus"></i></div>
+    </div>`; return wrap;
+  }
+  // button
+  const ic  = cell.props?.icon || '';
+  const lbl = cell.props?.label || cell.props?.command || '';
+  const el  = document.createElement('button'); el.className='preview-btn';
+  el.style.flexBasis = `calc(${w}% - 6px)`;
+  el.innerHTML = ic
+    ? `<i class="mdi ${ic.replace('mdi:','mdi-')}"></i>${lbl?`<span>${esc(lbl)}</span>`:''}`
+    : `<span>${esc(lbl||'?')}</span>`;
+  return el;
 }
 
 // ── Save & Deploy ──────────────────────────────────────────────────────────
