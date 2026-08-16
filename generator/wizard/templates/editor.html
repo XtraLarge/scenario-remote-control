@@ -82,7 +82,7 @@
     <select id="device-sel" onchange="loadDevice(this.value)" style="flex:1;min-width:160px;background:#111318;color:#e1e1e1;border:1px solid #2d3142;border-radius:6px;padding:6px 8px;font-size:.82rem">
       <option value="">— Gerät wählen —</option>
       {% for d in model.devices %}
-      <option value="{{ d.id }}" data-cmds="{{ d.commands|map(attribute='id')|list|tojson }}" data-name="{{ d.name }}" data-backend="{{ d.backend|tojson }}">{{ d.name }}</option>
+      <option value="{{ d.id }}">{{ d.name }}</option>
       {% endfor %}
     </select>
     <span id="saved-indicator" style="display:none" class="saved-badge">✓ Layout gespeichert</span>
@@ -131,8 +131,14 @@ let selectedPath  = null;
 async function loadDevice(devId) {
   const opt = document.querySelector(`#device-sel option[value="${devId}"]`);
   if (!opt || !devId) return;
-  currentDevice = { id:devId, name:opt.dataset.name,
-    cmds: JSON.parse(opt.dataset.cmds), backend: JSON.parse(opt.dataset.backend) };
+  // Gerätedaten aus MODEL lesen (data-* Attribute brechen bei JSON mit " in "-Attributen)
+  const modelDev = MODEL.devices.find(d => d.id === devId);
+  currentDevice = {
+    id:      devId,
+    name:    modelDev?.name || opt.textContent.trim(),
+    cmds:    (modelDev?.commands || []).map(c => c.id),
+    backend: modelDev?.backend || {},
+  };
   document.getElementById('cur-dev-lbl').textContent = currentDevice.name;
   selectedPath = null;
 
