@@ -292,13 +292,18 @@ def api_deploy():
             return jsonify({"error": "Lovelace Config nicht lesbar"}), 500
         config = cfg_r["result"]
 
-        # Views: neue ersetzen / anhängen
+        # Views: NUR anhängen — NIEMALS vorhandene überschreiben
         existing = config.get("views", [])
-        for nv in new_views:
-            path = nv.get("path")
-            existing = [v for v in existing if v.get("path") != path]
-            existing.append(nv)
-        config["views"] = existing
+        existing_paths = {v.get("path") for v in existing}
+        conflicts = [nv.get("path") for nv in new_views if nv.get("path") in existing_paths]
+        if conflicts:
+            ws.close()
+            return jsonify({
+                "error": f"Pfad-Konflikt: {conflicts} existiert bereits in Lovelace. "
+                         f"Bitte zuerst die alte Seite umbenennen oder löschen.",
+                "conflict_paths": conflicts
+            }), 409
+        config["views"] = existing + new_views
 
         # Speichern
         ws.send(json.dumps({"id": 2, "type": "lovelace/config/save", "config": config}))

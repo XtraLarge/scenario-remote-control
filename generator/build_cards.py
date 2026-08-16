@@ -318,7 +318,7 @@ def build_view(model, hub):
         for did in s["devices"]:
             if did not in seen and did in dev_by_id: seen.append(did)
     return {
-        "title": hub["name"], "path": f"fb-{hub['id']}",
+        "title": hub["name"], "path": f"fb-{hub['id']}-gen",
         "icon": "mdi:remote", "subview": False,
         "sections": [
             {"type": "grid", "cards": [build_scenario_card(model, hub, hub_entity)]},
