@@ -450,7 +450,7 @@ function renderProps() {
     html += `<div class="prop-section-title">Richtungs-Commands</div>`;
     ['up','down','left','right','ok'].forEach(dir => {
       html += `<div class="prop-row">
-        <label>${{up:'▲ Hoch',down:'▼ Runter',left:'◀ Links',right:'▶ Rechts',ok:'⭕ OK'}[dir]}</label>
+        <label>${ ({up:'▲ Hoch',down:'▼ Runter',left:'◀ Links',right:'▶ Rechts',ok:'⭕ OK'})[dir] }</label>
         <select onchange="setProp('${dir}',this.value)">
           <option value="">—</option>
           ${cmds.map(c=>`<option value="${c}" ${cell.props?.[dir]===c?'selected':''}>${c}</option>`).join('')}
@@ -461,7 +461,7 @@ function renderProps() {
     html += `<div class="prop-section-title">Volume-Commands</div>`;
     ['up','mute','down'].forEach(k => {
       html += `<div class="prop-row">
-        <label>${{up:'Vol +',mute:'Mute',down:'Vol -'}[k]}</label>
+        <label>${ ({up:'Vol +',mute:'Mute',down:'Vol -'})[k] }</label>
         <select onchange="setProp('${k}',this.value)">
           ${cmds.map(c=>`<option value="${c}" ${cell.props?.[k]===c?'selected':''}>${c}</option>`).join('')}
         </select></div>`;

@@ -161,10 +161,6 @@ def api_generate():
         "stdout_cards":   r2.stdout.strip(),
     })
 
-if __name__ == "__main__":
-    print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
-    app.run(host="0.0.0.0", port=8777, debug=False)
-
 # ── Schritt 2: Layout-Editor ─────────────────────────────────────────────────
 @app.route("/editor/<room_id>")
 def editor(room_id):
@@ -251,7 +247,7 @@ def ha_remotes():
             states = json.loads(r.read())
         remotes = sorted(s["entity_id"] for s in states
                          if s["entity_id"].startswith("remote."))
-        return jsonify(remotes)
+        return jsonify({"remotes": remotes})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -357,3 +353,8 @@ def _load_wizard_env():
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip()
     return env if "HA_URL" in env and "HA_TOKEN" in env else None
+
+if __name__ == "__main__":
+    print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
+    app.run(host="0.0.0.0", port=8777, debug=False)
+
