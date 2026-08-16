@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Remote Config Wizard</title>
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .tooltip { position:relative; display:inline-flex; align-items:center; }
+    .tooltip .tip {
+      display:none; position:absolute; bottom:calc(100% + 6px); left:0;
+      background:#252830; border:1px solid #3d4156; border-radius:6px;
+      padding:8px 10px; font-size:.75rem; color:#ccc; line-height:1.5;
+      width:260px; z-index:50; pointer-events:none;
+      box-shadow:0 4px 16px rgba(0,0,0,.5);
+    }
+    .tooltip:hover .tip { display:block; }
+    .help-icon { color:#555; cursor:help; margin-left:4px; font-size:.8rem; }
+    .entity-sel-wrap { display:flex; gap:6px; align-items:center; }
+    .entity-sel-wrap select { flex:1; }
+    .entity-sel-wrap button { background:#252830; border:1px solid #3d4156; color:#aaa;
+      border-radius:5px; padding:5px 8px; cursor:pointer; font-size:.8rem; white-space:nowrap; }
+    .entity-sel-wrap button:hover { border-color:#90caf9; color:#e1e1e1; }
+    .step-badge { display:inline-block; background:#2196f3; color:#fff; font-size:.7rem;
+      font-weight:600; padding:2px 7px; border-radius:10px; margin-right:6px; vertical-align:middle; }
+    .room-id-hint { font-size:.72rem; color:#666; margin-top:3px; }
+    .section-sep { border:none; border-top:1px solid #2d3142; margin:18px 0 14px; }
+  </style>
 </head>
 <body>
 <div class="wizard-card">
@@ -14,13 +35,13 @@
     <span class="icon">🎮</span>
     <div>
       <h1>Remote Config Wizard</h1>
-      <small>scenario-remote-control · Schritt 1 von 2</small>
+      <small>scenario-remote-control · Konfiguration &amp; Fernbedienungs-Auswahl</small>
     </div>
   </div>
 
   <!-- Schritt 1a: Quelle -->
   <div class="step">
-    <h2>1a — Quelle wählen</h2>
+    <h2><span class="step-badge">1</span> Quelle wählen</h2>
     <div class="source-grid">
       <div class="source-btn active" onclick="selectSource('harmony')">
         <span class="src-icon">🎵</span>
@@ -45,7 +66,9 @@
 
     <!-- Harmony-Optionen -->
     <div id="harmony-opts">
-      <div class="field-group" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field-group" style="grid-template-columns:1fr 1fr; gap:12px; margin-top:14px">
+
+        <!-- Conf-Datei -->
         <div class="field">
           <label>Harmony Conf-Datei</label>
           <select id="conf-file">
@@ -57,37 +80,78 @@
               <option value="">— keine harmony_*.conf in data/local/ —</option>
             {% endif %}
           </select>
+          <div class="room-id-hint">JSON-Conf-Datei deines Harmony Hubs</div>
         </div>
+
+        <!-- HA Remote-Entity -->
         <div class="field">
-          <label>HA Remote-Entity</label>
-          <input id="hub-entity" type="text" placeholder="remote.<raum>_hub" value="">
+          <label>
+            HA Remote-Entity
+            <span class="tooltip">
+              <span class="help-icon">ⓘ</span>
+              <span class="tip">Die remote.*-Entity deines Harmony Hubs in Home Assistant, z.B. <code>remote.wohnzimmer_hub</code>. Wird für Fernbedienungs-Kommandos in der Karte verwendet.</span>
+            </span>
+          </label>
+          <div class="entity-sel-wrap">
+            <select id="hub-entity">
+              <option value="">— HA Remote-Entities laden… —</option>
+            </select>
+            <button onclick="loadRemoteEntities()" title="Entities aus HA abrufen">🔄 Laden</button>
+          </div>
+          <div class="room-id-hint" id="entity-load-hint">→ Klicke „Laden" um Entities aus HA abzurufen</div>
         </div>
-        <div class="field">
-          <label>Raum-ID</label>
-          <input id="room-id" type="text" placeholder="wz" maxlength="10" value="">
-        </div>
+
       </div>
-      <div class="field-group" style="grid-template-columns:1fr 2fr;margin-top:8px">
+
+      <div class="field-group" style="grid-template-columns:1fr 2fr; gap:12px; margin-top:8px">
+
+        <!-- Raum-ID -->
         <div class="field">
-          <label>Raum-Name (Anzeige)</label>
+          <label>
+            Raum-ID
+            <span class="tooltip">
+              <span class="help-icon">ⓘ</span>
+              <span class="tip">
+                Kurzbezeichnung für den Raum (2–6 Zeichen, Kleinbuchstaben).<br><br>
+                Beispiele: <code>wz</code> = Wohnzimmer, <code>gz</code> = Gästezimmer, <code>kz</code> = Kinderzimmer<br><br>
+                Wird als Dateiname und als Sensor-Präfix verwendet:<br>
+                <code>binary_sensor.wz_show_card_*</code><br>
+                <code>data/local/wz.model.json</code>
+              </span>
+            </span>
+          </label>
+          <input id="room-id" type="text" placeholder="wz" maxlength="10" value=""
+                 style="font-family:monospace">
+          <div class="room-id-hint">z.B. <code>wz</code>, <code>gz</code>, <code>kz</code> — nur Kleinbuchstaben</div>
+        </div>
+
+        <!-- Raum-Name -->
+        <div class="field">
+          <label>Raum-Name <small style="color:#666">(Anzeige in der Karte)</small></label>
           <input id="room-name" type="text" placeholder="Wohnzimmer" value="">
         </div>
+
       </div>
-      <div class="actions" style="margin-top:12px">
-        <button class="btn btn-primary" onclick="loadConf()">📂 Conf laden &amp; Aktivitäten lesen</button>
+
+      <div class="actions" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="loadConf()">
+          📂 Conf laden &amp; Aktivitäten lesen
+        </button>
         <div id="load-status"></div>
       </div>
     </div>
   </div>
 
+  <hr class="section-sep">
+
   <!-- Schritt 1b: Roster -->
-  <div class="step" id="roster-step" style="display:none">
-    <h2>1b — Welche Fernbedienungen bei welcher Aktivität?</h2>
-    <p style="font-size:.82rem;color:#aaa;margin-bottom:12px">
-      Aktiviere pro Aktivität die Fernbedienungen, die dabei eingeblendet werden sollen.
+  <div id="roster-step" style="display:none">
+    <h2><span class="step-badge">2</span> Fernbedienungen pro Aktivität</h2>
+    <p style="font-size:.82rem;color:#aaa;margin-bottom:14px">
+      Wähle pro Aktivität, welche virtuellen Fernbedienungen eingeblendet werden sollen.
     </p>
     <div class="roster-grid" id="roster-grid"></div>
-    <div class="actions">
+    <div class="actions" style="margin-top:16px">
       <button class="btn btn-primary" id="gen-btn" onclick="generate()" disabled>
         ⚙️ Modell &amp; Karte generieren
       </button>
@@ -95,26 +159,59 @@
     </div>
   </div>
 
-  <!-- Ergebnis -->
+  <!-- Ergebnis + Deploy -->
   <div id="result-step" style="display:none">
+    <hr class="section-sep">
     <div class="result-card">
       <h3>✅ Generiert</h3>
       <div class="result-meta" id="result-meta"></div>
-      <div class="yaml-hint" id="result-hint"></div>
     </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+      <button class="btn btn-primary" id="deploy-btn" onclick="deploy()">
+        🚀 Direkt in HA Lovelace übernehmen
+      </button>
+      <button class="btn btn-secondary" id="editor-btn" style="display:none"
+              onclick="openEditor()">
+        🎨 Layout &amp; Design bearbeiten →
+      </button>
+    </div>
+    <div id="deploy-status" style="margin-top:8px"></div>
   </div>
 
 </div><!-- .wizard-card -->
 
 <script>
-let _devices = [];  // [{name, harmony_id, cmd_count}]
-let _activities = {};  // {id: name}
+let _devices    = [];
+let _activities = {};
+let _roomId     = '';
 
+// ── Quelle wählen ─────────────────────────────────────────────────────────
 function selectSource(src) {
   document.querySelectorAll('.source-btn:not(.disabled)').forEach(b => b.classList.remove('active'));
   event.currentTarget.classList.add('active');
 }
 
+// ── HA Remote-Entities laden ──────────────────────────────────────────────
+async function loadRemoteEntities() {
+  const hint = document.getElementById('entity-load-hint');
+  const sel  = document.getElementById('hub-entity');
+  hint.textContent = '⟳ Lade Entities aus HA…';
+  try {
+    const res  = await fetch('/api/ha-remotes');
+    const data = await res.json();
+    if (data.error) { hint.textContent = '⚠ ' + data.error; return; }
+    const remotes = data.remotes || [];
+    sel.innerHTML = remotes.length
+      ? remotes.map(e => `<option value="${e}">${e}</option>`).join('')
+      : '<option value="">— keine remote.* gefunden —</option>';
+    hint.textContent = `${remotes.length} Entity/ies gefunden`;
+  } catch(e) {
+    hint.textContent = '⚠ Verbindung fehlgeschlagen. Wizard.env korrekt?';
+  }
+}
+
+// ── Conf laden ────────────────────────────────────────────────────────────
 async function loadConf() {
   const conf = document.getElementById('conf-file').value;
   const st   = document.getElementById('load-status');
@@ -122,9 +219,8 @@ async function loadConf() {
 
   st.innerHTML = '<span><span class="spinner"></span> Lade…</span>';
 
-  const res = await fetch('/api/load-conf', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
+  const res  = await fetch('/api/load-conf', {
+    method: 'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({conf})
   });
   const data = await res.json();
@@ -141,8 +237,10 @@ async function loadConf() {
   document.getElementById('roster-step').style.display = 'block';
   document.getElementById('gen-btn').disabled = false;
   document.getElementById('result-step').style.display = 'none';
+  document.getElementById('roster-step').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
+// ── Roster rendern ────────────────────────────────────────────────────────
 function renderRoster() {
   const grid = document.getElementById('roster-grid');
   grid.innerHTML = '';
@@ -160,30 +258,37 @@ function renderRoster() {
   }
 }
 
+// ── Generieren ────────────────────────────────────────────────────────────
 async function generate() {
-  const conf      = document.getElementById('conf-file').value;
-  const entity    = document.getElementById('hub-entity').value.trim();
-  const roomId    = document.getElementById('room-id').value.trim();
-  const roomName  = document.getElementById('room-name').value.trim() || roomId;
-  const st        = document.getElementById('gen-status');
+  const conf     = document.getElementById('conf-file').value;
+  const entity   = document.getElementById('hub-entity').value;
+  const roomId   = document.getElementById('room-id').value.trim();
+  const roomName = document.getElementById('room-name').value.trim() || roomId;
+  const st       = document.getElementById('gen-status');
 
-  if (!entity || !roomId) {
-    st.innerHTML = '<span class="status err">Bitte Entity und Raum-ID ausfüllen.</span>'; return;
+  if (!entity) {
+    st.innerHTML = '<span class="status err">Bitte HA Remote-Entity wählen (→ Laden klicken).</span>'; return;
+  }
+  if (!roomId) {
+    st.innerHTML = '<span class="status err">Bitte Raum-ID eingeben (z.B. „wz").</span>'; return;
+  }
+  if (!/^[a-z0-9_]+$/.test(roomId)) {
+    st.innerHTML = '<span class="status err">Raum-ID: nur Kleinbuchstaben, Ziffern, Unterstrich.</span>'; return;
   }
 
-  // Roster aus Checkboxen aufbauen
+  _roomId = roomId;
+
   const roster = {};
   document.querySelectorAll('.roster-cb').forEach(cb => {
     if (!roster[cb.dataset.act]) roster[cb.dataset.act] = [];
     if (cb.checked) roster[cb.dataset.act].push(cb.dataset.dev);
   });
 
-  st.innerHTML = '<span><span class="spinner"></span> Generiere…</span>';
+  st.innerHTML = '<span><span class="spinner"></span> Generiere Modell &amp; Karte…</span>';
   document.getElementById('gen-btn').disabled = true;
 
-  const res = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
+  const res  = await fetch('/api/generate', {
+    method: 'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({conf, hub_entity: entity, room_id: roomId,
                           room_name: roomName, roster})
   });
@@ -195,16 +300,42 @@ async function generate() {
     return;
   }
 
-  st.innerHTML = '<span class="status ok">✓ Fertig</span>';
+  st.innerHTML = '<span class="status ok">✓ Generiert</span>';
   document.getElementById('result-step').style.display = 'block';
   document.getElementById('result-meta').innerHTML = `
-    <div><strong>Geräte:</strong> ${data.devices} &nbsp; <strong>Szenarien:</strong> ${data.scenarios}</div>
-    <div><strong>Modell:</strong> ${data.model_path}</div>
-    <div><strong>Karte:</strong>  ${data.card_path}</div>
-    <div style="margin-top:4px;color:#888">${data.stdout_extract} / ${data.stdout_cards}</div>
-  `;
-  document.getElementById('result-hint').textContent =
-    `HA Lovelace > Dashboard bearbeiten > Ansicht hinzufügen\n→ YAML-Modus → Inhalt aus ${data.card_path} einfügen`;
+    <div><strong>Geräte:</strong> ${data.devices} &nbsp;|&nbsp; <strong>Szenarien:</strong> ${data.scenarios}</div>
+    <div style="font-size:.75rem;color:#888;margin-top:4px">
+      Modell: <code>${data.model_path}</code> &nbsp;|&nbsp; Karte: <code>${data.card_path}</code>
+    </div>`;
+  document.getElementById('editor-btn').style.display = 'inline-flex';
+  document.getElementById('result-step').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── Deploy ────────────────────────────────────────────────────────────────
+async function deploy() {
+  const st = document.getElementById('deploy-status');
+  if (!_roomId) { st.innerHTML = '<span class="status err">Zuerst generieren.</span>'; return; }
+
+  document.getElementById('deploy-btn').disabled = true;
+  st.innerHTML = '<span><span class="spinner"></span> Deploye in HA Lovelace…</span>';
+
+  const res  = await fetch('/api/deploy', {
+    method: 'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({room_id: _roomId})
+  });
+  const data = await res.json();
+  document.getElementById('deploy-btn').disabled = false;
+
+  if (data.ok) {
+    st.innerHTML = `<span class="status ok">✅ Erfolgreich in HA übernommen! Views: ${(data.views_deployed||[]).join(', ')||'aktualisiert'}</span>`;
+  } else {
+    st.innerHTML = `<span class="status err">Deploy-Fehler: ${data.error||'unbekannt'}</span>`;
+  }
+}
+
+// ── Layout-Editor öffnen ──────────────────────────────────────────────────
+function openEditor() {
+  if (_roomId) window.location.href = `/editor/${_roomId}`;
 }
 </script>
 </body>

@@ -164,3 +164,196 @@ def api_generate():
 if __name__ == "__main__":
     print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
     app.run(host="0.0.0.0", port=8777, debug=False)
+
+# ── Schritt 2: Layout-Editor ─────────────────────────────────────────────────
+@app.route("/editor/<room_id>")
+def editor(room_id):
+    """Visueller FB-Layout-Editor für ein generiertes Modell."""
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    if not os.path.exists(model_path):
+        return f"Modell {room_id}.model.json nicht gefunden. Bitte zuerst Schritt 1 ausführen.", 404
+    model = json.load(open(model_path, encoding="utf-8"))
+    return render_template("editor.html", model=model, room_id=room_id)
+
+@app.route("/api/mdi-search")
+def mdi_search():
+    """MDI-Icon-Suche (aus eingebetteter Icon-Liste)."""
+    q = request.args.get("q", "").lower()
+    # Häufige Icons für Fernbedienungen
+    icons = [
+        "mdi:power","mdi:power-on","mdi:power-off","mdi:power-standby",
+        "mdi:home","mdi:home-outline","mdi:home-circle",
+        "mdi:menu","mdi:apps","mdi:dots-horizontal","mdi:dots-grid",
+        "mdi:arrow-up","mdi:arrow-down","mdi:arrow-left","mdi:arrow-right",
+        "mdi:chevron-up","mdi:chevron-down","mdi:chevron-left","mdi:chevron-right",
+        "mdi:circle","mdi:checkbox-marked-circle","mdi:check-circle",
+        "mdi:arrow-left-circle","mdi:close-circle","mdi:close",
+        "mdi:play","mdi:pause","mdi:stop","mdi:record","mdi:record-rec",
+        "mdi:rewind","mdi:fast-forward","mdi:skip-previous","mdi:skip-next",
+        "mdi:volume-plus","mdi:volume-minus","mdi:volume-mute","mdi:volume-high",
+        "mdi:television","mdi:television-guide","mdi:television-play","mdi:television-classic",
+        "mdi:satellite-uplink","mdi:satellite","mdi:antenna",
+        "mdi:microphone","mdi:microphone-outline","mdi:voice",
+        "mdi:netflix","mdi:youtube","mdi:spotify","mdi:music",
+        "mdi:bluetooth","mdi:bluetooth-audio","mdi:bluetooth-connect",
+        "mdi:radio","mdi:radio-tower",
+        "mdi:hdmi-port","mdi:video-input-hdmi","mdi:video-input-component",
+        "mdi:sony-playstation","mdi:microsoft-xbox","mdi:nintendo-switch",
+        "mdi:subtitles","mdi:subtitles-outline","mdi:text",
+        "mdi:information","mdi:information-outline",
+        "mdi:cog","mdi:cog-outline","mdi:tune","mdi:tune-variant",
+        "mdi:sleep","mdi:sleep-off","mdi:timer",
+        "mdi:lightbulb","mdi:lightbulb-outline",
+        "mdi:star","mdi:star-outline","mdi:heart","mdi:bookmark",
+        "mdi:format-list-bulleted","mdi:view-grid","mdi:view-list",
+        "mdi:swap-horizontal","mdi:shuffle","mdi:repeat",
+        "mdi:numeric-0","mdi:numeric-1","mdi:numeric-2","mdi:numeric-3",
+        "mdi:numeric-4","mdi:numeric-5","mdi:numeric-6","mdi:numeric-7",
+        "mdi:numeric-8","mdi:numeric-9",
+        "mdi:gamepad","mdi:gamepad-variant","mdi:controller-classic",
+        "mdi:fan","mdi:fan-off","mdi:air-conditioner","mdi:weather-windy",
+        "mdi:speaker","mdi:speaker-wireless","mdi:speaker-multiple",
+        "mdi:equalizer","mdi:waveform","mdi:surround-sound",
+        "mdi:skip-backward","mdi:skip-forward","mdi:step-backward","mdi:step-forward",
+        "mdi:keyboard","mdi:keyboard-return","mdi:keyboard-backspace",
+        "mdi:delete","mdi:delete-outline","mdi:backspace","mdi:backspace-outline",
+        "mdi:magnify","mdi:magnify-plus","mdi:magnify-minus",
+        "mdi:lock","mdi:lock-open","mdi:key",
+        "mdi:bell","mdi:bell-outline","mdi:bell-off",
+        "mdi:wifi","mdi:lan","mdi:web","mdi:server",
+        "mdi:usb","mdi:usb-port",
+        "mdi:input","mdi:output","mdi:import","mdi:export",
+        "mdi:page-next","mdi:page-previous","mdi:book-open",
+        "mdi:image","mdi:camera","mdi:video","mdi:movie-open",
+        "mdi:green","mdi:red","mdi:yellow","mdi:blue",
+        "mdi:square","mdi:circle-outline","mdi:triangle",
+        "mdi:ab-testing","mdi:remote","mdi:remote-tv",
+    ]
+    if q:
+        filtered = [i for i in icons if q in i.lower()]
+    else:
+        filtered = icons
+    return jsonify(filtered[:60])
+
+@app.route("/api/ha-remotes")
+def ha_remotes():
+    """Remote-Entities aus HA (für Selectbox)."""
+    env = _load_wizard_env()
+    if not env:
+        return jsonify({"error": "wizard.env nicht konfiguriert"}), 500
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"{env['HA_URL']}/api/states",
+            headers={"Authorization": f"Bearer {env['HA_TOKEN']}"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            states = json.loads(r.read())
+        remotes = sorted(s["entity_id"] for s in states
+                         if s["entity_id"].startswith("remote."))
+        return jsonify(remotes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/deploy", methods=["POST"])
+def api_deploy():
+    """Generierte Karte direkt in HA Lovelace deployen (WebSocket)."""
+    data = request.json or {}
+    room_id = data.get("room_id", "")
+    card_path = os.path.join(CARDS, f"{room_id}.yaml")
+    if not os.path.exists(card_path):
+        return jsonify({"error": "Karte nicht generiert"}), 404
+
+    env = _load_wizard_env()
+    if not env:
+        return jsonify({"error": "wizard.env nicht konfiguriert"}), 500
+
+    try:
+        import yaml as _yaml
+        card_yaml = open(card_path, encoding="utf-8").read()
+        new_views = _yaml.safe_load(
+            "\n".join(l for l in card_yaml.splitlines() if not l.startswith("#"))
+        ).get("views", [])
+    except Exception as e:
+        return jsonify({"error": f"YAML-Fehler: {e}"}), 500
+
+    try:
+        import websocket as _ws
+        ws = _ws.create_connection(
+            env["HA_URL"].replace("http://","ws://").replace("https://","wss://") + "/api/websocket",
+            timeout=10
+        )
+        ws.recv()
+        ws.send(json.dumps({"type": "auth", "access_token": env["HA_TOKEN"]}))
+        auth_r = json.loads(ws.recv())
+        if auth_r.get("type") != "auth_ok":
+            return jsonify({"error": "HA Auth fehlgeschlagen"}), 500
+
+        # Aktuelle Config laden
+        ws.send(json.dumps({"id": 1, "type": "lovelace/config", "url_path": None}))
+        cfg_r = json.loads(ws.recv())
+        if not cfg_r.get("success"):
+            return jsonify({"error": "Lovelace Config nicht lesbar"}), 500
+        config = cfg_r["result"]
+
+        # Views: neue ersetzen / anhängen
+        existing = config.get("views", [])
+        for nv in new_views:
+            path = nv.get("path")
+            existing = [v for v in existing if v.get("path") != path]
+            existing.append(nv)
+        config["views"] = existing
+
+        # Speichern
+        ws.send(json.dumps({"id": 2, "type": "lovelace/config/save", "config": config}))
+        save_r = json.loads(ws.recv())
+        ws.close()
+
+        if save_r.get("success"):
+            return jsonify({"ok": True, "views_deployed": [v.get("path") for v in new_views]})
+        else:
+            return jsonify({"error": "Lovelace Save fehlgeschlagen", "detail": save_r}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/save-layout", methods=["POST"])
+def api_save_layout():
+    """Layout (rows + custom_actions) für ein Gerät speichern → Karte neu generieren."""
+    data = request.json or {}
+    room_id  = data.get("room_id", "")
+    dev_id   = data.get("device_id", "")
+    rows     = data.get("rows", [])
+    actions  = data.get("custom_actions", [])
+    if not room_id or not dev_id:
+        return jsonify({"error": "room_id / device_id fehlt"}), 400
+
+    layout_path = os.path.join(LOCAL, f"{room_id}.layout.json")
+    layout = {}
+    if os.path.exists(layout_path):
+        layout = json.load(open(layout_path, encoding="utf-8"))
+    layout[dev_id] = {"rows": rows, "custom_actions": actions}
+    with open(layout_path, "w", encoding="utf-8") as f:
+        json.dump(layout, f, indent=2, ensure_ascii=False)
+
+    # Karte neu generieren
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    card_path  = os.path.join(CARDS, f"{room_id}.yaml")
+    r = subprocess.run(
+        [sys.executable, os.path.join(GEN, "build_cards.py"),
+         "--model", model_path, "--out", card_path,
+         "--layout", layout_path],
+        capture_output=True, text=True, cwd=REPO
+    )
+    return jsonify({"ok": r.returncode == 0, "stdout": r.stdout.strip(), "stderr": r.stderr[:300]})
+
+def _load_wizard_env():
+    path = os.path.join(LOCAL, "wizard.env")
+    if not os.path.exists(path):
+        return None
+    env = {}
+    for line in open(path):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip()
+    return env if "HA_URL" in env and "HA_TOKEN" in env else None
