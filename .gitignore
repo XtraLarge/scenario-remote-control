@@ -1,0 +1,8 @@
+# lokale, personenbezogene Daten NICHT einchecken
+/data/local/
+*.local.yaml
+*.local.json
+harmony_*.conf
+.venv/
+__pycache__/
+*.pyc

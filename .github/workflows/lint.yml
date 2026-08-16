@@ -1,0 +1,15 @@
+name: lint
+on: [push, pull_request]
+jobs:
+  yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint
+        run: |
+          pipx install yamllint || pip install yamllint
+          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' . || true
+      - name: validate example against schema
+        run: |
+          pip install jsonschema
+          python -c "import json,jsonschema; jsonschema.validate(json.load(open('data/example/model.example.json')), json.load(open('data/model.schema.json'))); print('example valid')"

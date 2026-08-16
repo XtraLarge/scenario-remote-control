@@ -1,0 +1,17 @@
+# Referenz-Backend: Logitech Harmony (aktuell aktiv)
+name: harmony
+startScenario:
+  service: remote.turn_on
+  data:
+    entity_id: "{{ hub.entity }}"
+    activity: "{{ scenario.name }}"
+stopScenario:
+  service: remote.turn_off
+  data:
+    entity_id: "{{ hub.entity }}"
+sendCommand:
+  service: remote.send_command
+  data:
+    entity_id: "{{ hub.entity }}"
+    device: "{{ device.name }}"
+    command: "{{ command.id }}"

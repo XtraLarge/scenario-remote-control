@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "scenario-remote-control model",
+  "type": "object",
+  "required": [
+    "hubs",
+    "devices",
+    "scenarios"
+  ],
+  "properties": {
+    "hubs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "backend"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "harmony",
+              "broadlink",
+              "esphome-ir",
+              "unfolded-circle",
+              "sofabaton",
+              "native"
+            ]
+          },
+          "entity": {
+            "type": "string",
+            "description": "HA remote entity (backend-spezifisch)"
+          }
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "commands"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "icon": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "hub",
+          "devices"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hub": {
+            "type": "string"
+          },
+          "primaryDevice": {
+            "type": "string"
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "beteiligte device-ids (Roster)"
+          }
+        }
+      }
+    }
+  }
+}

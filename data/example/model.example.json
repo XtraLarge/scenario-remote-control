@@ -1,0 +1,92 @@
+{
+  "hubs": [
+    {
+      "id": "wz",
+      "name": "Wohnzimmer",
+      "backend": "harmony",
+      "entity": "remote.wohnzimmer_hub"
+    }
+  ],
+  "devices": [
+    {
+      "id": "tv",
+      "name": "TV",
+      "commands": [
+        {
+          "id": "PowerToggle",
+          "label": "Power"
+        },
+        {
+          "id": "VolumeUp",
+          "label": "Vol +"
+        },
+        {
+          "id": "VolumeDown",
+          "label": "Vol -"
+        },
+        {
+          "id": "Mute",
+          "label": "Mute"
+        }
+      ]
+    },
+    {
+      "id": "avr",
+      "name": "AV-Receiver",
+      "commands": [
+        {
+          "id": "PowerToggle",
+          "label": "Power"
+        },
+        {
+          "id": "VolumeUp",
+          "label": "Vol +"
+        },
+        {
+          "id": "VolumeDown",
+          "label": "Vol -"
+        }
+      ]
+    },
+    {
+      "id": "streamer",
+      "name": "Streaming-Box",
+      "commands": [
+        {
+          "id": "DirectionUp"
+        },
+        {
+          "id": "DirectionDown"
+        },
+        {
+          "id": "DirectionLeft"
+        },
+        {
+          "id": "DirectionRight"
+        },
+        {
+          "id": "Select"
+        },
+        {
+          "id": "Back"
+        },
+        {
+          "id": "Home"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "tv",
+      "name": "TV schauen",
+      "hub": "wz",
+      "primaryDevice": "streamer",
+      "devices": [
+        "tv",
+        "avr",
+        "streamer"
+      ]
+    }
+  ]
+}
