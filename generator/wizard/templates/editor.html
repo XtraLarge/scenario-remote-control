@@ -36,6 +36,14 @@
     .cell-icon{font-size:.95rem}.cell-label{font-size:.68rem;max-width:58px;overflow:hidden;text-overflow:ellipsis}
     .row-add-btn{background:none;border:1px dashed #2d3142;color:#444;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.72rem;flex-shrink:0}
     .row-add-btn:hover{border-color:#90caf9;color:#90caf9}
+    .cell.dragging{opacity:.35;border-style:dashed}
+    .cell.drag-over{outline:2px solid #2196f3;outline-offset:2px}
+    .row-block.drop-target{background:#0d1929;border-color:#2196f3}
+    .cell-move{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+      display:none;gap:2px;background:#1e2128;border:1px solid #3d4156;border-radius:3px;padding:1px 3px}
+    .cell:hover .cell-move{display:flex}
+    .cell-move button{background:none;border:none;color:#90caf9;cursor:pointer;font-size:.65rem;padding:0 2px;line-height:1}
+    .cell-move button:hover{color:#fff}
     .widget-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
     .widget-item{display:flex;align-items:center;gap:6px;padding:7px 8px;background:#252830;border:1px solid #3d4156;border-radius:6px;cursor:pointer;font-size:.75rem}
     .widget-item:hover{border-color:#90caf9;background:#2d3142}
@@ -329,6 +337,29 @@ function removeSection(si)    { sections.splice(si,1);                     selec
 function moveRow(si,ri,d)     { const r=sections[si].rows,n=ri+d; if(n<0||n>=r.length)return; [r[ri],r[n]]=[r[n],r[ri]]; renderCanvas(); }
 function selectCell(si,ri,ci) { selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; renderCanvas(); renderProps(); }
 
+// ── Drag-State ─────────────────────────────────────────────────────────────
+let _drag = null;
+
+// ── Button in Reihe verschieben (◀ ▶) ─────────────────────────────────────
+function moveCell(si,ri,ci,dir) {
+  const cells=sections[si].rows[ri].cells;
+  const ni=ci+dir;
+  if(ni<0||ni>=cells.length) return;
+  [cells[ci],cells[ni]]=[cells[ni],cells[ci]];
+  selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ni};
+  renderCanvas(); renderProps();
+}
+
+// ── Button in andere Reihe verschieben (↑ ↓) ──────────────────────────────
+function moveCellToRow(si,ri,ci,dir) {
+  const targetRi=ri+dir;
+  if(targetRi<0||targetRi>=sections[si].rows.length) return;
+  const [cell]=sections[si].rows[ri].cells.splice(ci,1);
+  sections[si].rows[targetRi].cells.push(cell);
+  selectedPath={sectionIdx:si,rowIdx:targetRi,cellIdx:sections[si].rows[targetRi].cells.length-1};
+  renderCmdList(); renderCanvas(); renderProps();
+}
+
 // ── Canvas rendern ─────────────────────────────────────────────────────────
 function renderCanvas() {
   const cv=document.getElementById('canvas');
@@ -346,14 +377,57 @@ function renderCanvas() {
       const rb=document.createElement('div'); rb.className='row-block';
       const num=document.createElement('span'); num.className='row-num'; num.textContent=ri+1; rb.appendChild(num);
       const cells=document.createElement('div'); cells.className='cells';
+      // Reihe als Drop-Ziel (Cell aus anderer Reihe ablegen)
+      rb.addEventListener('dragover', e => {
+        if (!_drag) return;
+        e.preventDefault(); e.dataTransfer.dropEffect='move';
+        rb.classList.add('drop-target');
+      });
+      rb.addEventListener('dragleave', () => rb.classList.remove('drop-target'));
+      rb.addEventListener('drop', e => {
+        e.preventDefault(); rb.classList.remove('drop-target');
+        if (!_drag || (_drag.si===si && _drag.ri===ri)) return;
+        const cell = sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci, 1)[0];
+        sections[si].rows[ri].cells.push(cell);
+        selectedPath = {sectionIdx:si, rowIdx:ri, cellIdx:sections[si].rows[ri].cells.length-1};
+        _drag=null; renderCmdList(); renderCanvas(); renderProps();
+      });
+
       row.cells.forEach((cell,ci)=>{
         const isSel=selectedPath&&selectedPath.sectionIdx===si&&selectedPath.rowIdx===ri&&selectedPath.cellIdx===ci;
         const el=document.createElement('div');
         el.className=`cell widget-${cell.type} ${cell.type==='spacer'?'spacer':''} ${isSel?'selected':''}`;
         const cols=cell.props?.cols||1, gridCols=parseInt(document.getElementById('grid-cols').value||12);
         el.style.flexBasis=`calc(${(cols/gridCols)*100}% - 6px)`;
-        el.innerHTML=cellHtml(cell)+`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
+        // ◀ ▶ Pfeil-Buttons + × Delete
+        el.innerHTML=cellHtml(cell)
+          +`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`
+          +`<span class="cell-move">
+              <button onclick="event.stopPropagation();moveCell(${si},${ri},${ci},-1)" title="◀ links">◀</button>
+              <button onclick="event.stopPropagation();moveCellToRow(${si},${ri},${ci},-1)" title="Reihe ↑">↑</button>
+              <button onclick="event.stopPropagation();moveCellToRow(${si},${ri},${ci},1)"  title="Reihe ↓">↓</button>
+              <button onclick="event.stopPropagation();moveCell(${si},${ri},${ci},1)"  title="▶ rechts">▶</button>
+            </span>`;
         el.onclick=()=>selectCell(si,ri,ci);
+        // Drag & Drop
+        el.draggable=true;
+        el.addEventListener('dragstart', e => {
+          _drag={si,ri,ci}; el.classList.add('dragging');
+          e.dataTransfer.effectAllowed='move';
+        });
+        el.addEventListener('dragend', () => { _drag=null; el.classList.remove('dragging'); renderCanvas(); });
+        el.addEventListener('dragover', e => { if(!_drag||(_drag.si===si&&_drag.ri===ri&&_drag.ci===ci))return; e.preventDefault(); el.classList.add('drag-over'); });
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('drop', e => {
+          e.preventDefault(); e.stopPropagation(); el.classList.remove('drag-over');
+          if (!_drag||(_drag.si===si&&_drag.ri===ri&&_drag.ci===ci)) return;
+          const src=sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci,1)[0];
+          // Ziel-Index neu berechnen nach splice
+          let tci=ci; if(_drag.si===si&&_drag.ri===ri&&_drag.ci<ci) tci--;
+          sections[si].rows[ri].cells.splice(tci,0,src);
+          selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:tci};
+          _drag=null; renderCmdList(); renderCanvas(); renderProps();
+        });
         cells.appendChild(el);
       });
       const add=document.createElement('button'); add.className='row-add-btn'; add.textContent='＋';
