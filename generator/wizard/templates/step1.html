@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remote Config Wizard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wizard-card">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="icon">🎮</span>
+    <div>
+      <h1>Remote Config Wizard</h1>
+      <small>scenario-remote-control · Schritt 1 von 2</small>
+    </div>
+  </div>
+
+  <!-- Schritt 1a: Quelle -->
+  <div class="step">
+    <h2>1a — Quelle wählen</h2>
+    <div class="source-grid">
+      <div class="source-btn active" onclick="selectSource('harmony')">
+        <span class="src-icon">🎵</span>
+        <span class="src-name">Harmony</span>
+      </div>
+      <div class="source-btn disabled" title="coming soon">
+        <span class="src-icon">📡</span>
+        <span class="src-name">Broadlink</span>
+        <small>coming soon</small>
+      </div>
+      <div class="source-btn disabled" title="coming soon">
+        <span class="src-icon">🔌</span>
+        <span class="src-name">ESPHome-IR</span>
+        <small>coming soon</small>
+      </div>
+      <div class="source-btn disabled" title="coming soon">
+        <span class="src-icon">🔗</span>
+        <span class="src-name">Unfolded Circle</span>
+        <small>coming soon</small>
+      </div>
+    </div>
+
+    <!-- Harmony-Optionen -->
+    <div id="harmony-opts">
+      <div class="field-group" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="field">
+          <label>Harmony Conf-Datei</label>
+          <select id="conf-file">
+            {% if conf_files %}
+              {% for f in conf_files %}
+              <option value="{{ f }}">{{ f }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="">— keine harmony_*.conf in data/local/ —</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="field">
+          <label>HA Remote-Entity</label>
+          <input id="hub-entity" type="text" placeholder="remote.<raum>_hub" value="">
+        </div>
+        <div class="field">
+          <label>Raum-ID</label>
+          <input id="room-id" type="text" placeholder="wz" maxlength="10" value="">
+        </div>
+      </div>
+      <div class="field-group" style="grid-template-columns:1fr 2fr;margin-top:8px">
+        <div class="field">
+          <label>Raum-Name (Anzeige)</label>
+          <input id="room-name" type="text" placeholder="Wohnzimmer" value="">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary" onclick="loadConf()">📂 Conf laden &amp; Aktivitäten lesen</button>
+        <div id="load-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schritt 1b: Roster -->
+  <div class="step" id="roster-step" style="display:none">
+    <h2>1b — Welche Fernbedienungen bei welcher Aktivität?</h2>
+    <p style="font-size:.82rem;color:#aaa;margin-bottom:12px">
+      Aktiviere pro Aktivität die Fernbedienungen, die dabei eingeblendet werden sollen.
+    </p>
+    <div class="roster-grid" id="roster-grid"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="gen-btn" onclick="generate()" disabled>
+        ⚙️ Modell &amp; Karte generieren
+      </button>
+      <div id="gen-status"></div>
+    </div>
+  </div>
+
+  <!-- Ergebnis -->
+  <div id="result-step" style="display:none">
+    <div class="result-card">
+      <h3>✅ Generiert</h3>
+      <div class="result-meta" id="result-meta"></div>
+      <div class="yaml-hint" id="result-hint"></div>
+    </div>
+  </div>
+
+</div><!-- .wizard-card -->
+
+<script>
+let _devices = [];  // [{name, harmony_id, cmd_count}]
+let _activities = {};  // {id: name}
+
+function selectSource(src) {
+  document.querySelectorAll('.source-btn:not(.disabled)').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+async function loadConf() {
+  const conf = document.getElementById('conf-file').value;
+  const st   = document.getElementById('load-status');
+  if (!conf) { st.innerHTML = '<span class="status err">Keine Conf-Datei gewählt.</span>'; return; }
+
+  st.innerHTML = '<span><span class="spinner"></span> Lade…</span>';
+
+  const res = await fetch('/api/load-conf', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({conf})
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    st.innerHTML = `<span class="status err">Fehler: ${data.error}</span>`; return;
+  }
+
+  _activities = data.activities;
+  _devices    = data.devices;
+
+  st.innerHTML = `<span class="status ok">✓ ${_devices.length} Geräte, ${Object.keys(_activities).length} Aktivitäten geladen.</span>`;
+
+  renderRoster();
+  document.getElementById('roster-step').style.display = 'block';
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('result-step').style.display = 'none';
+}
+
+function renderRoster() {
+  const grid = document.getElementById('roster-grid');
+  grid.innerHTML = '';
+  for (const [actId, actName] of Object.entries(_activities)) {
+    const card = document.createElement('div');
+    card.className = 'activity-card';
+    card.innerHTML = `<div class="act-name">▶ ${actName}</div>` +
+      _devices.map(d => `
+        <label class="device-row">
+          <input type="checkbox" class="roster-cb"
+                 data-act="${actId}" data-dev="${d.name}" checked>
+          <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
+        </label>`).join('');
+    grid.appendChild(card);
+  }
+}
+
+async function generate() {
+  const conf      = document.getElementById('conf-file').value;
+  const entity    = document.getElementById('hub-entity').value.trim();
+  const roomId    = document.getElementById('room-id').value.trim();
+  const roomName  = document.getElementById('room-name').value.trim() || roomId;
+  const st        = document.getElementById('gen-status');
+
+  if (!entity || !roomId) {
+    st.innerHTML = '<span class="status err">Bitte Entity und Raum-ID ausfüllen.</span>'; return;
+  }
+
+  // Roster aus Checkboxen aufbauen
+  const roster = {};
+  document.querySelectorAll('.roster-cb').forEach(cb => {
+    if (!roster[cb.dataset.act]) roster[cb.dataset.act] = [];
+    if (cb.checked) roster[cb.dataset.act].push(cb.dataset.dev);
+  });
+
+  st.innerHTML = '<span><span class="spinner"></span> Generiere…</span>';
+  document.getElementById('gen-btn').disabled = true;
+
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({conf, hub_entity: entity, room_id: roomId,
+                          room_name: roomName, roster})
+  });
+  const data = await res.json();
+  document.getElementById('gen-btn').disabled = false;
+
+  if (!res.ok) {
+    st.innerHTML = `<span class="status err">Fehler: ${data.error}<br><small>${data.detail||''}</small></span>`;
+    return;
+  }
+
+  st.innerHTML = '<span class="status ok">✓ Fertig</span>';
+  document.getElementById('result-step').style.display = 'block';
+  document.getElementById('result-meta').innerHTML = `
+    <div><strong>Geräte:</strong> ${data.devices} &nbsp; <strong>Szenarien:</strong> ${data.scenarios}</div>
+    <div><strong>Modell:</strong> ${data.model_path}</div>
+    <div><strong>Karte:</strong>  ${data.card_path}</div>
+    <div style="margin-top:4px;color:#888">${data.stdout_extract} / ${data.stdout_cards}</div>
+  `;
+  document.getElementById('result-hint').textContent =
+    `HA Lovelace > Dashboard bearbeiten > Ansicht hinzufügen\n→ YAML-Modus → Inhalt aus ${data.card_path} einfügen`;
+}
+</script>
+</body>
+</html>

@@ -29,7 +29,7 @@ def build(conf, m):
         d = dmap[hname]
         devices.append({
             "id": d["id"], "name": d["name"],
-            "backend": {"harmony": {"device": hname}},
+            "backend": {"harmony": {"device": hname, "device_id": info.get("id")}},
             "commands": [{"id": c} for c in info["commands"]],
         })
     smap = m["scenarios"]
