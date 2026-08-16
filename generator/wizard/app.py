@@ -173,63 +173,48 @@ def editor(room_id):
 
 @app.route("/api/mdi-search")
 def mdi_search():
-    """MDI-Icon-Suche (aus eingebetteter Icon-Liste)."""
-    q = request.args.get("q", "").lower()
-    # Häufige Icons für Fernbedienungen
-    icons = [
-        "mdi:power","mdi:power-on","mdi:power-off","mdi:power-standby",
-        "mdi:home","mdi:home-outline","mdi:home-circle",
-        "mdi:menu","mdi:apps","mdi:dots-horizontal","mdi:dots-grid",
-        "mdi:arrow-up","mdi:arrow-down","mdi:arrow-left","mdi:arrow-right",
-        "mdi:chevron-up","mdi:chevron-down","mdi:chevron-left","mdi:chevron-right",
-        "mdi:circle","mdi:checkbox-marked-circle","mdi:check-circle",
-        "mdi:arrow-left-circle","mdi:close-circle","mdi:close",
-        "mdi:play","mdi:pause","mdi:stop","mdi:record","mdi:record-rec",
-        "mdi:rewind","mdi:fast-forward","mdi:skip-previous","mdi:skip-next",
-        "mdi:volume-plus","mdi:volume-minus","mdi:volume-mute","mdi:volume-high",
-        "mdi:television","mdi:television-guide","mdi:television-play","mdi:television-classic",
-        "mdi:satellite-uplink","mdi:satellite","mdi:antenna",
-        "mdi:microphone","mdi:microphone-outline","mdi:voice",
-        "mdi:netflix","mdi:youtube","mdi:spotify","mdi:music",
-        "mdi:bluetooth","mdi:bluetooth-audio","mdi:bluetooth-connect",
-        "mdi:radio","mdi:radio-tower",
-        "mdi:hdmi-port","mdi:video-input-hdmi","mdi:video-input-component",
-        "mdi:sony-playstation","mdi:microsoft-xbox","mdi:nintendo-switch",
-        "mdi:subtitles","mdi:subtitles-outline","mdi:text",
-        "mdi:information","mdi:information-outline",
-        "mdi:cog","mdi:cog-outline","mdi:tune","mdi:tune-variant",
-        "mdi:sleep","mdi:sleep-off","mdi:timer",
-        "mdi:lightbulb","mdi:lightbulb-outline",
-        "mdi:star","mdi:star-outline","mdi:heart","mdi:bookmark",
-        "mdi:format-list-bulleted","mdi:view-grid","mdi:view-list",
-        "mdi:swap-horizontal","mdi:shuffle","mdi:repeat",
-        "mdi:numeric-0","mdi:numeric-1","mdi:numeric-2","mdi:numeric-3",
-        "mdi:numeric-4","mdi:numeric-5","mdi:numeric-6","mdi:numeric-7",
-        "mdi:numeric-8","mdi:numeric-9",
-        "mdi:gamepad","mdi:gamepad-variant","mdi:controller-classic",
-        "mdi:fan","mdi:fan-off","mdi:air-conditioner","mdi:weather-windy",
-        "mdi:speaker","mdi:speaker-wireless","mdi:speaker-multiple",
-        "mdi:equalizer","mdi:waveform","mdi:surround-sound",
-        "mdi:skip-backward","mdi:skip-forward","mdi:step-backward","mdi:step-forward",
-        "mdi:keyboard","mdi:keyboard-return","mdi:keyboard-backspace",
-        "mdi:delete","mdi:delete-outline","mdi:backspace","mdi:backspace-outline",
-        "mdi:magnify","mdi:magnify-plus","mdi:magnify-minus",
-        "mdi:lock","mdi:lock-open","mdi:key",
-        "mdi:bell","mdi:bell-outline","mdi:bell-off",
-        "mdi:wifi","mdi:lan","mdi:web","mdi:server",
-        "mdi:usb","mdi:usb-port",
-        "mdi:input","mdi:output","mdi:import","mdi:export",
-        "mdi:page-next","mdi:page-previous","mdi:book-open",
-        "mdi:image","mdi:camera","mdi:video","mdi:movie-open",
-        "mdi:green","mdi:red","mdi:yellow","mdi:blue",
-        "mdi:square","mdi:circle-outline","mdi:triangle",
-        "mdi:ab-testing","mdi:remote","mdi:remote-tv",
-    ]
-    if q:
-        filtered = [i for i in icons if q in i.lower()]
+    """MDI-Icon-Suche — alle 7000+ Icons aus mdi-all.json."""
+    import os as _os
+    q        = request.args.get("q", "").lower().replace("mdi:","")
+    max_n    = int(request.args.get("n", 120))
+    json_path = _os.path.join(_os.path.dirname(__file__), "static", "mdi-all.json")
+    if _os.path.exists(json_path):
+        import json as _json
+        all_icons = _json.load(open(json_path))
     else:
-        filtered = icons
-    return jsonify(filtered[:60])
+        all_icons = ["mdi:power","mdi:home","mdi:play","mdi:pause","mdi:stop",
+                     "mdi:volume-plus","mdi:volume-minus","mdi:volume-mute","mdi:menu"]
+    if q:
+        # Ranking: Exakt > Prefix nach "mdi:" > Wort-Anfang > Substring
+        exact   = [ic for ic in all_icons if ic == f"mdi:{q}"]
+        prefix  = [ic for ic in all_icons if ic.startswith(f"mdi:{q}") and ic not in exact]
+        word    = [ic for ic in all_icons if f"-{q}" in ic and ic not in exact and ic not in prefix]
+        rest    = [ic for ic in all_icons if q in ic and ic not in exact and ic not in prefix and ic not in word]
+        filtered = exact + prefix + word + rest
+    else:
+        # Ohne Suchbegriff: häufige Home-Remote-Icons zuerst
+        priority = ["mdi:power","mdi:power-off","mdi:home","mdi:home-outline","mdi:menu",
+                    "mdi:play","mdi:pause","mdi:stop","mdi:rewind","mdi:fast-forward",
+                    "mdi:skip-previous","mdi:skip-next","mdi:record","mdi:record-rec",
+                    "mdi:volume-plus","mdi:volume-minus","mdi:volume-mute","mdi:volume-high",
+                    "mdi:arrow-up","mdi:arrow-down","mdi:arrow-left","mdi:arrow-right",
+                    "mdi:chevron-up","mdi:chevron-down","mdi:chevron-left","mdi:chevron-right",
+                    "mdi:circle","mdi:close","mdi:check","mdi:keyboard-return",
+                    "mdi:netflix","mdi:youtube","mdi:spotify","mdi:television",
+                    "mdi:bluetooth","mdi:radio","mdi:hdmi-port","mdi:video-input-hdmi",
+                    "mdi:microphone","mdi:microphone-off","mdi:star","mdi:heart",
+                    "mdi:information","mdi:cog","mdi:remote","mdi:remote-tv",
+                    "mdi:gamepad","mdi:speaker","mdi:equalizer","mdi:fan",
+                    "mdi:numeric-0","mdi:numeric-1","mdi:numeric-2","mdi:numeric-3",
+                    "mdi:green","mdi:red","mdi:yellow","mdi:blue",
+                    "mdi:square","mdi:triangle","mdi:circle-outline",
+                    "mdi:sleep","mdi:timer","mdi:alarm","mdi:bell",
+                    "mdi:apps","mdi:view-grid","mdi:format-list-bulleted",
+                    "mdi:keyboard","mdi:backspace","mdi:delete",
+                    "mdi:magnify","mdi:shuffle","mdi:repeat","mdi:repeat-once"]
+        rest = [ic for ic in all_icons if ic not in priority]
+        filtered = priority + rest
+    return jsonify(filtered[:max_n])
 
 @app.route("/api/ha-remotes")
 def ha_remotes():
@@ -317,9 +302,18 @@ def api_deploy():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/load-layout/<room_id>/<device_id>")
+def api_load_layout(room_id, device_id):
+    """Gespeichertes Editor-Layout (sections) für ein Gerät laden."""
+    p = os.path.join(LOCAL, f"{room_id}.{device_id}.layout.json")
+    if not os.path.exists(p):
+        return jsonify({"error": "kein gespeichertes Layout"}), 404
+    data = json.load(open(p, encoding="utf-8"))
+    return jsonify({"sections": data.get("sections"), "saved": True})
+
 @app.route("/api/save-layout", methods=["POST"])
 def api_save_layout():
-    """Layout (rows + custom_actions) für ein Gerät speichern → Karte neu generieren."""
+    """Layout (sections + rows + custom_actions) für ein Gerät speichern → Karte neu generieren."""
     data = request.json or {}
     room_id  = data.get("room_id", "")
     dev_id   = data.get("device_id", "")
@@ -335,6 +329,13 @@ def api_save_layout():
     layout[dev_id] = {"rows": rows, "custom_actions": actions}
     with open(layout_path, "w", encoding="utf-8") as f:
         json.dump(layout, f, indent=2, ensure_ascii=False)
+
+    # Editor-State (sections) pro Gerät speichern — für späteres Laden/Bearbeiten
+    sections = data.get("sections")
+    if sections is not None:
+        dev_layout_path = os.path.join(LOCAL, f"{room_id}.{dev_id}.layout.json")
+        with open(dev_layout_path, "w", encoding="utf-8") as f:
+            json.dump({"sections": sections, "device_id": dev_id, "room_id": room_id}, f, indent=2, ensure_ascii=False)
 
     # Karte neu generieren
     model_path = os.path.join(LOCAL, f"{room_id}.model.json")

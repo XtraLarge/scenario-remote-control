@@ -5,684 +5,601 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Remote Layout Editor</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
   <style>
-    .editor-layout { display:grid; grid-template-columns:260px 1fr 280px; gap:12px; height:calc(100vh - 120px); }
-    /* Linke Spalte: Geräte + Widget-Palette */
-    .panel { background:#1e2128; border:1px solid #2d3142; border-radius:8px; overflow-y:auto; padding:12px; }
-    .panel-title { font-size:.8rem; font-weight:600; color:#90caf9; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
-    /* Mitte: Canvas */
-    .canvas { background:#1e2128; border:1px solid #2d3142; border-radius:8px; padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
-    .canvas-empty { display:flex; align-items:center; justify-content:center; height:100%; color:#555; font-size:.85rem; }
-    /* Rechte Spalte: Eigenschaften */
-    .props { background:#1e2128; border:1px solid #2d3142; border-radius:8px; padding:12px; }
-    /* Section-Block */
-    .section-block { background:#252830; border:1px solid #2d3142; border-radius:6px; padding:8px; }
-    .section-header { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-    .section-label { font-size:.78rem; color:#90caf9; font-weight:600; flex:1; }
-    .section-header .btn-icon { background:none; border:none; color:#666; cursor:pointer; padding:2px 4px; border-radius:4px; font-size:.9rem; }
-    .section-header .btn-icon:hover { color:#e1e1e1; background:#3d4156; }
-    /* Reihe */
-    .row-block { display:flex; align-items:center; gap:4px; min-height:38px; padding:3px; background:#1a1d24; border-radius:4px; border:1px dashed #2d3142; }
-    .row-block.drag-over { border-color:#2196f3; background:#0d1929; }
-    .row-num { font-size:.65rem; color:#555; min-width:14px; }
-    .cells { display:flex; gap:4px; flex:1; flex-wrap:wrap; align-items:center; }
-    /* Zellen */
-    .cell {
-      display:flex; align-items:center; justify-content:center; gap:3px;
-      padding:4px 8px; border-radius:5px; cursor:pointer; border:1px solid #3d4156;
-      background:#252830; font-size:.78rem; white-space:nowrap; user-select:none;
-      min-width:36px; position:relative;
-    }
-    .cell:hover { border-color:#90caf9; }
-    .cell.selected { border-color:#2196f3; background:#0d1929; }
-    .cell.spacer { background:#111318; border-style:dashed; color:#444; }
-    .cell.widget-circlepad { background:#1a2a1a; border-color:#4caf50; }
-    .cell.widget-dpad      { background:#1a1a2a; border-color:#9c27b0; }
-    .cell.widget-numpad    { background:#2a1a1a; border-color:#ff5722; }
-    .cell.widget-vol       { background:#1a2a2a; border-color:#00bcd4; }
-    .cell-icon { font-size:1rem; }
-    .cell-label { font-size:.7rem; max-width:60px; overflow:hidden; text-overflow:ellipsis; }
-    .cell-del { position:absolute; top:-6px; right:-6px; width:14px; height:14px;
-                background:#c62828; color:#fff; border-radius:50%; font-size:.6rem;
-                display:none; align-items:center; justify-content:center; cursor:pointer; }
-    .cell:hover .cell-del { display:flex; }
-    .row-add-cell { background:none; border:1px dashed #3d4156; color:#555; border-radius:4px;
-                    padding:3px 8px; cursor:pointer; font-size:.75rem; }
-    .row-add-cell:hover { border-color:#90caf9; color:#90caf9; }
-    /* Row-Aktionen */
-    .row-actions { display:flex; flex-direction:column; gap:2px; }
-    .row-actions button { background:none; border:none; color:#555; cursor:pointer; font-size:.8rem; padding:0 2px; }
-    .row-actions button:hover { color:#e1e1e1; }
-    /* Widget-Palette */
-    .widget-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; }
-    .widget-item {
-      display:flex; flex-direction:column; align-items:center; gap:3px;
-      padding:8px 4px; background:#252830; border:1px solid #3d4156; border-radius:6px;
-      cursor:pointer; font-size:.72rem; text-align:center;
-    }
-    .widget-item:hover { border-color:#90caf9; background:#1e2128; }
-    .widget-item .w-icon { font-size:1.2rem; }
-    /* Gerät-Select */
-    .device-select { width:100%; background:#111318; color:#e1e1e1; border:1px solid #3d4156; border-radius:6px; padding:6px 8px; font-size:.85rem; margin-bottom:10px; }
-    /* Properties */
-    .prop-row { margin-bottom:10px; }
-    .prop-row label { display:block; font-size:.75rem; color:#aaa; margin-bottom:3px; }
-    .prop-row input, .prop-row select { width:100%; background:#111318; color:#e1e1e1; border:1px solid #3d4156; border-radius:4px; padding:6px 8px; font-size:.82rem; }
-    .prop-row input:focus, .prop-row select:focus { outline:none; border-color:#2196f3; }
-    .prop-section-title { font-size:.7rem; font-weight:600; color:#555; text-transform:uppercase; margin:12px 0 6px; border-top:1px solid #2d3142; padding-top:8px; }
-    /* Icon picker */
-    .icon-picker { position:relative; }
-    .icon-preview { display:flex; align-items:center; gap:6px; padding:5px 8px; background:#111318; border:1px solid #3d4156; border-radius:4px; cursor:pointer; }
-    .icon-preview:hover { border-color:#90caf9; }
-    .icon-dropdown { position:absolute; top:100%; left:0; right:0; background:#1e2128; border:1px solid #3d4156; border-radius:6px; z-index:100; padding:8px; display:none; box-shadow:0 8px 24px rgba(0,0,0,.5); }
-    .icon-dropdown.open { display:block; }
-    .icon-search { width:100%; background:#111318; color:#e1e1e1; border:1px solid #3d4156; border-radius:4px; padding:5px 8px; font-size:.8rem; margin-bottom:8px; }
-    .icon-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; max-height:180px; overflow-y:auto; }
-    .icon-opt { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px; cursor:pointer; border-radius:4px; font-size:.6rem; color:#aaa; word-break:break-all; }
-    .icon-opt:hover { background:#3d4156; }
-    .icon-opt span:first-child { font-size:1.1rem; }
-    /* Toolbar */
-    .toolbar { display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #2d3142; margin-bottom:10px; flex-wrap:wrap; }
-    .col-selector { display:flex; align-items:center; gap:4px; font-size:.78rem; color:#aaa; }
-    .col-selector input[type=number] { width:44px; background:#111318; color:#e1e1e1; border:1px solid #3d4156; border-radius:4px; padding:4px 6px; font-size:.8rem; }
-    /* Breadcrumb */
-    .breadcrumb { font-size:.78rem; color:#aaa; margin-bottom:10px; }
-    .breadcrumb a { color:#90caf9; text-decoration:none; }
-    .breadcrumb a:hover { text-decoration:underline; }
-    /* Deploy-Banner */
-    .deploy-bar { display:flex; gap:8px; align-items:center; padding:10px 0 0; border-top:1px solid #2d3142; margin-top:10px; }
+    .editor-layout{display:grid;grid-template-columns:260px 1fr 280px;gap:10px;height:calc(100vh - 148px)}
+    .panel{background:#1e2128;border:1px solid #2d3142;border-radius:8px;overflow-y:auto;padding:10px}
+    .panel-title{font-size:.75rem;font-weight:700;color:#90caf9;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .canvas{background:#1e2128;border:1px solid #2d3142;border-radius:8px;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+    .canvas-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#444;font-size:.85rem;text-align:center;line-height:1.8}
+    .props{background:#1e2128;border:1px solid #2d3142;border-radius:8px;padding:10px;overflow-y:auto}
+    .section-block{background:#252830;border:1px solid #2d3142;border-radius:6px;padding:7px;margin-bottom:6px}
+    .section-header{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+    .section-title-input{background:none;border:none;color:#90caf9;font-size:.8rem;font-weight:600;flex:1;outline:none;padding:2px}
+    .section-title-input:hover{background:#1e2128;border-radius:3px}
+    .btn-icon{background:none;border:none;color:#555;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:.85rem}
+    .btn-icon:hover{color:#e1e1e1;background:#3d4156}
+    .row-block{display:flex;align-items:center;gap:3px;min-height:36px;padding:3px 4px;background:#1a1d24;border-radius:4px;border:1px dashed #2d3142;margin-bottom:3px}
+    .row-num{font-size:.62rem;color:#444;min-width:14px;text-align:right}
+    .cells{display:flex;gap:3px;flex:1;flex-wrap:wrap;align-items:center;min-height:28px}
+    .row-actions{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
+    .row-actions button{background:none;border:none;color:#444;cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1.4}
+    .row-actions button:hover{color:#e1e1e1}
+    .cell{display:flex;align-items:center;justify-content:center;gap:3px;padding:4px 7px;border-radius:5px;cursor:pointer;border:1px solid #3d4156;background:#252830;font-size:.75rem;white-space:nowrap;user-select:none;min-width:32px;position:relative;transition:border-color .15s}
+    .cell:hover{border-color:#90caf9}
+    .cell.selected{border-color:#2196f3;background:#0d1929;box-shadow:0 0 0 1px #2196f3}
+    .cell.spacer{background:#111318;border-style:dashed;color:#333;font-size:.65rem}
+    .cell.widget-circlepad{border-color:#4caf50}.cell.widget-dpad{border-color:#9c27b0}
+    .cell.widget-numpad{border-color:#ff5722}.cell.widget-volume{border-color:#00bcd4}
+    .cell-del{position:absolute;top:-6px;right:-6px;width:14px;height:14px;background:#c62828;color:#fff;border-radius:50%;font-size:.6rem;display:none;align-items:center;justify-content:center;cursor:pointer}
+    .cell:hover .cell-del{display:flex}
+    .cell-icon{font-size:.95rem}.cell-label{font-size:.68rem;max-width:58px;overflow:hidden;text-overflow:ellipsis}
+    .row-add-btn{background:none;border:1px dashed #2d3142;color:#444;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.72rem;flex-shrink:0}
+    .row-add-btn:hover{border-color:#90caf9;color:#90caf9}
+    .widget-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+    .widget-item{display:flex;align-items:center;gap:6px;padding:7px 8px;background:#252830;border:1px solid #3d4156;border-radius:6px;cursor:pointer;font-size:.75rem}
+    .widget-item:hover{border-color:#90caf9;background:#2d3142}
+    .cmd-chip{display:inline-flex;align-items:center;gap:3px;background:#1a1d24;border:1px solid #2d3142;border-radius:3px;padding:2px 6px;margin:2px;cursor:pointer;font-size:.72rem;transition:all .15s}
+    .cmd-chip:hover{border-color:#90caf9;color:#fff}
+    .cmd-chip.used{border-color:#4caf50;background:#1a2a1a;color:#81c784}
+    .cmd-chip.used::after{content:'✓';margin-left:3px;font-size:.62rem}
+    .prop-label{display:block;font-size:.73rem;color:#888;margin-bottom:3px}
+    .prop-input{width:100%;background:#111318;color:#e1e1e1;border:1px solid #2d3142;border-radius:4px;padding:5px 8px;font-size:.8rem;box-sizing:border-box}
+    .prop-input:focus{outline:none;border-color:#2196f3}
+    .prop-group{margin-bottom:9px}
+    .prop-sep{font-size:.68rem;color:#555;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-top:1px solid #2d3142;padding-top:8px;margin:10px 0 8px}
+    .icon-picker{position:relative}
+    .icon-preview-btn{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#111318;border:1px solid #2d3142;border-radius:4px;cursor:pointer;width:100%;text-align:left}
+    .icon-preview-btn:hover{border-color:#90caf9}
+    .icon-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1e2128;border:1px solid #3d4156;border-radius:8px;z-index:200;padding:10px;display:none;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+    .icon-dropdown.open{display:block}
+    .icon-search-inp{width:100%;background:#111318;color:#e1e1e1;border:1px solid #2d3142;border-radius:4px;padding:5px 8px;font-size:.8rem;margin-bottom:8px;box-sizing:border-box}
+    .icon-search-inp:focus{outline:none;border-color:#2196f3}
+    .icon-grid-wrap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-height:180px;overflow-y:auto}
+    .icon-opt{display:flex;flex-direction:column;align-items:center;padding:4px 2px;cursor:pointer;border-radius:4px;font-size:.58rem;color:#666;gap:2px}
+    .icon-opt:hover{background:#3d4156;color:#e1e1e1}
+    .icon-opt i{font-size:1.1rem}
+    .icon-hint{color:#555;font-size:.75rem;padding:10px;text-align:center}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px;border-bottom:1px solid #2d3142;margin-bottom:10px}
+    .col-ctrl{display:flex;align-items:center;gap:5px;font-size:.78rem;color:#aaa}
+    .col-ctrl input{width:44px;background:#111318;color:#e1e1e1;border:1px solid #2d3142;border-radius:4px;padding:4px 6px;font-size:.8rem}
+    .breadcrumb{font-size:.77rem;color:#666;margin-bottom:8px}
+    .breadcrumb a{color:#90caf9;text-decoration:none}
+    .deploy-bar{border-top:1px solid #2d3142;padding-top:10px;margin-top:10px}
+    .saved-badge{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:#4caf50;background:#1a2a1a;border:1px solid #4caf50;border-radius:4px;padding:2px 7px}
   </style>
 </head>
 <body>
-<div class="wizard-card" style="max-width:1400px; padding:14px">
-
-  <div class="header">
+<div class="wizard-card" style="max-width:1400px;padding:12px">
+  <div class="header" style="margin-bottom:8px">
     <span class="icon">🎮</span>
     <div>
       <h1>Remote Layout Editor</h1>
-      <div class="breadcrumb">
-        <a href="/">← Wizard</a> &rsaquo; Layout &amp; Design &rsaquo;
-        <span id="current-device-label">Gerät wählen…</span>
-      </div>
+      <div class="breadcrumb"><a href="/">← Wizard</a> › Layout &amp; Design › <span id="cur-dev-lbl">Gerät wählen…</span></div>
     </div>
   </div>
-
-  <!-- Gerät wählen -->
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <div class="field" style="flex:1;min-width:200px">
-      <label style="font-size:.75rem;color:#aaa">Gerät</label>
-      <select class="device-select" id="device-sel" onchange="loadDevice(this.value)" style="margin:0">
-        <option value="">— Gerät wählen —</option>
-        {% for d in model.devices %}
-        <option value="{{ d.id }}"
-                data-cmds="{{ d.commands | map(attribute='id') | list | tojson }}"
-                data-name="{{ d.name }}"
-                data-backend="{{ d.backend | tojson }}">
-          {{ d.name }}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-selector">
-      <label>Grid-Spalten:</label>
-      <input type="number" id="grid-cols" value="12" min="1" max="24" onchange="renderCanvas()">
-    </div>
+  <div class="toolbar">
+    <select id="device-sel" onchange="loadDevice(this.value)" style="flex:1;min-width:160px;background:#111318;color:#e1e1e1;border:1px solid #2d3142;border-radius:6px;padding:6px 8px;font-size:.82rem">
+      <option value="">— Gerät wählen —</option>
+      {% for d in model.devices %}
+      <option value="{{ d.id }}" data-cmds="{{ d.commands|map(attribute='id')|list|tojson }}" data-name="{{ d.name }}" data-backend="{{ d.backend|tojson }}">{{ d.name }}</option>
+      {% endfor %}
+    </select>
+    <span id="saved-indicator" style="display:none" class="saved-badge">✓ Layout gespeichert</span>
+    <div class="col-ctrl"><label>Spalten:</label><input type="number" id="grid-cols" value="12" min="1" max="24" onchange="renderCanvas()"></div>
     <button class="btn btn-secondary" onclick="addSection()">＋ Section</button>
     <button class="btn btn-secondary" onclick="addRow()">＋ Reihe</button>
   </div>
-
   <div class="editor-layout">
-
-    <!-- Linke Spalte: Widget-Palette -->
     <div class="panel">
       <div class="panel-title">Widgets</div>
       <div class="widget-grid">
-        <div class="widget-item" onclick="addCell('button')" title="Einfacher Button">
-          <span class="w-icon">🔘</span>Button
-        </div>
-        <div class="widget-item" onclick="addCell('spacer')" title="Leerbereich">
-          <span class="w-icon">⬜</span>Spacer
-        </div>
-        <div class="widget-item" onclick="addCell('circlepad')" title="Rundes D-Pad">
-          <span class="w-icon">🔵</span>Circlepad
-        </div>
-        <div class="widget-item" onclick="addCell('dpad')" title="Klassisches D-Pad">
-          <span class="w-icon">🕹️</span>D-Pad
-        </div>
-        <div class="widget-item" onclick="addCell('numpad')" title="Ziffernblock 0–9">
-          <span class="w-icon">🔢</span>Numpad
-        </div>
-        <div class="widget-item" onclick="addCell('volume')" title="Vol + / Mute / Vol -">
-          <span class="w-icon">🔊</span>Volume
-        </div>
-        <div class="widget-item" onclick="addCell('touchpad')" title="Touch-Pad">
-          <span class="w-icon">👆</span>Touchpad
-        </div>
-        <div class="widget-item" onclick="addCell('slider')" title="Schieberegler">
-          <span class="w-icon">🎚️</span>Slider
-        </div>
+        <div class="widget-item" onclick="addCellToLast('button')"><i class="mdi mdi-gesture-tap" style="font-size:1.1rem;color:#90caf9"></i><span>Button</span></div>
+        <div class="widget-item" onclick="addCellToLast('spacer')"><i class="mdi mdi-border-none" style="font-size:1.1rem;color:#555"></i><span>Spacer</span></div>
+        <div class="widget-item" onclick="addCellToLast('circlepad')"><i class="mdi mdi-circle-half-full" style="font-size:1.1rem;color:#4caf50"></i><span>Circlepad</span></div>
+        <div class="widget-item" onclick="addCellToLast('dpad')"><i class="mdi mdi-gamepad" style="font-size:1.1rem;color:#9c27b0"></i><span>D-Pad</span></div>
+        <div class="widget-item" onclick="addCellToLast('numpad')"><i class="mdi mdi-numeric" style="font-size:1.1rem;color:#ff5722"></i><span>Numpad</span></div>
+        <div class="widget-item" onclick="addCellToLast('volume')"><i class="mdi mdi-volume-high" style="font-size:1.1rem;color:#00bcd4"></i><span>Volume</span></div>
+        <div class="widget-item" onclick="addCellToLast('touchpad')"><i class="mdi mdi-gesture-swipe" style="font-size:1.1rem;color:#ff9800"></i><span>Touchpad</span></div>
+        <div class="widget-item" onclick="addCellToLast('slider')"><i class="mdi mdi-tune-vertical" style="font-size:1.1rem;color:#8bc34a"></i><span>Slider</span></div>
       </div>
-
-      <div class="panel-title" style="margin-top:8px">Verfügbare Commands</div>
-      <div id="cmd-list" style="font-size:.75rem;color:#aaa;line-height:1.8">
-        <em>Gerät wählen…</em>
-      </div>
+      <div class="panel-title" style="margin-top:4px">Commands <span style="font-size:.62rem;font-weight:400;color:#444">→ klicken = Button hinzufügen</span></div>
+      <div style="font-size:.68rem;color:#444;margin-bottom:5px"><span style="color:#4caf50">grün ✓</span> = bereits auf der FB platziert</div>
+      <div id="cmd-list"><em style="color:#333;font-size:.75rem">Gerät wählen…</em></div>
     </div>
-
-    <!-- Mitte: Canvas -->
-    <div class="canvas" id="canvas">
-      <div class="canvas-empty">← Gerät wählen und Widgets hinzufügen</div>
-    </div>
-
-    <!-- Rechte Spalte: Eigenschaften -->
-    <div class="props" id="props-panel">
+    <div class="canvas" id="canvas"><div class="canvas-empty">← Gerät wählen<br><br>Gespeichertes Layout wird automatisch geladen.<br>Neu: Smart-Template als Startpunkt.</div></div>
+    <div class="props">
       <div class="panel-title">Eigenschaften</div>
-      <div id="props-content" style="color:#555;font-size:.82rem">
-        Element auswählen…
-      </div>
-
-      <!-- Deploy -->
+      <div id="props-content" style="color:#444;font-size:.8rem">Element auswählen…</div>
       <div class="deploy-bar">
-        <button class="btn btn-primary" onclick="saveAndDeploy()" id="deploy-btn" style="width:100%">
-          🚀 Speichern &amp; in HA deployen
-        </button>
+        <button class="btn btn-primary" onclick="saveAndDeploy()" style="width:100%">🚀 Speichern &amp; Deployen</button>
+        <div id="deploy-status" style="margin-top:6px;font-size:.78rem"></div>
       </div>
-      <div id="deploy-status" style="margin-top:6px"></div>
     </div>
-
   </div>
-</div><!-- .wizard-card -->
+</div>
 
 <script>
-const ROOM_ID  = {{ room_id | tojson }};
-const MODEL    = {{ model | tojson }};
+const ROOM_ID = {{ room_id | tojson }};
+const MODEL   = {{ model | tojson }};
 
-// ── State ──────────────────────────────────────────────────────────────────
-let currentDevice = null;   // {id, name, cmds:[], backend:{}}
-let sections = [];          // [{title, rows:[{cells:[{type,props}]}]}]
-let selectedPath = null;    // {sectionIdx, rowIdx, cellIdx}
+let currentDevice = null;
+let sections      = [];
+let selectedPath  = null;
 
-// ── Device laden ───────────────────────────────────────────────────────────
-function loadDevice(devId) {
+// ── Device laden: erst gespeichertes Layout, dann Smart-Template ──────────
+async function loadDevice(devId) {
   const opt = document.querySelector(`#device-sel option[value="${devId}"]`);
   if (!opt || !devId) return;
-  currentDevice = {
-    id:      devId,
-    name:    opt.dataset.name,
-    cmds:    JSON.parse(opt.dataset.cmds),
-    backend: JSON.parse(opt.dataset.backend),
-  };
-  document.getElementById('current-device-label').textContent = currentDevice.name;
-  // Command-Liste
+  currentDevice = { id:devId, name:opt.dataset.name,
+    cmds: JSON.parse(opt.dataset.cmds), backend: JSON.parse(opt.dataset.backend) };
+  document.getElementById('cur-dev-lbl').textContent = currentDevice.name;
+  selectedPath = null;
+
+  // Gespeichertes Layout versuchen zu laden
+  const saved = await loadSavedLayout(devId);
+  if (saved) {
+    sections = saved;
+    document.getElementById('saved-indicator').style.display = 'inline-flex';
+  } else {
+    sections = buildDefaultLayout(currentDevice);
+    document.getElementById('saved-indicator').style.display = 'none';
+  }
+  renderCmdList(); renderCanvas(); renderProps();
+}
+
+async function loadSavedLayout(devId) {
+  try {
+    const res = await fetch(`/api/load-layout/${ROOM_ID}/${devId}`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.sections || null;
+  } catch(e) { return null; }
+}
+
+// ── Used Commands ─────────────────────────────────────────────────────────
+function usedCommands() {
+  const used = new Set();
+  sections.forEach(sec => sec.rows.forEach(row => row.cells.forEach(cell => {
+    const p = cell.props || {};
+    if (p.command) used.add(p.command);
+    ['up','down','left','right','ok','mute'].forEach(k => { if (p[k]) used.add(p[k]); });
+  })));
+  return used;
+}
+function renderCmdList() {
+  if (!currentDevice) return;
+  const used = usedCommands();
   document.getElementById('cmd-list').innerHTML =
     currentDevice.cmds.map(c =>
-      `<span class="badge" style="display:inline-block;background:#252830;border:1px solid #3d4156;
-       border-radius:3px;padding:1px 5px;margin:2px;cursor:pointer"
-       onclick="quickAddCmd('${c}')">${c}</span>`
+      `<span class="cmd-chip ${used.has(c)?'used':''}" onclick="quickAdd('${c}')" title="Als Button hinzufügen">${c}</span>`
     ).join('');
-  // Default-Layout laden (Smart-Template oder leer)
-  sections = buildDefaultLayout(currentDevice);
-  selectedPath = null;
-  renderCanvas();
-  renderProps();
 }
-
-function quickAddCmd(cmd) {
+function quickAdd(cmd) {
+  if (!currentDevice) return;
   if (!sections.length) addSection();
-  const lastSec = sections[sections.length-1];
-  if (!lastSec.rows.length) lastSec.rows.push({cells:[]});
-  const lastRow = lastSec.rows[lastSec.rows.length-1];
-  lastRow.cells.push({type:'button', props:{
-    name: `${currentDevice.id}_${cmd.toLowerCase()}`,
-    label: cmd, icon: guessIcon(cmd), command: cmd, cols: 1, haptics: true
-  }});
-  renderCanvas();
+  const s = sections[sections.length-1];
+  if (!s.rows.length) s.rows.push({cells:[]});
+  s.rows[s.rows.length-1].cells.push({type:'button', props:{
+    name:`${currentDevice.id}_${cmd.replace(/\W/g,'_').toLowerCase()}`,
+    label:cmd, icon:guessIcon(cmd), command:cmd, cols:1, haptics:true }});
+  renderCmdList(); renderCanvas();
 }
 
-// ── Smart Default-Layout ───────────────────────────────────────────────────
+// ── detectType ───────────────────────────────────────────────────────────
+function detectType(cmds) {
+  const c=new Set(cmds);
+  const hasNav=c.has('DirectionUp'), hasOk=c.has('OK')||c.has('Select'),
+        hasNum=c.has('0'), hasVol=c.has('VolumeUp'),
+        hasHdmi=[...c].some(x=>x.startsWith('InputHdmi')),
+        hasInp=[...c].filter(x=>x.startsWith('Input')).length>=3;
+  if (c.has('Ambilight')||c.has('Netflix')) return 'smart_tv';
+  if ((hasHdmi||hasInp) && c.has('PowerToggle')&&hasVol) return 'avr';
+  if (hasNav&&hasOk) {
+    if (hasNum&&(c.has('Record')||c.has('MyPause'))) return 'satellite';
+    if (c.has('Apps')||(c.has('Home')&&c.has('Back')&&!hasNum)) return 'streaming';
+  }
+  if ((c.has('PowerToggle')||c.has('PowerOn'))&&hasVol) return 'avr';
+  return 'fan';
+}
+// Hilfsfunktionen für Layout-Bausteine
+function mkBtn(cmd,lbl,ic,cols) {
+  const d=currentDevice;
+  return {type:'button', props:{name:`${d.id}_${cmd.replace(/\W/g,'_').toLowerCase()}`,
+    label:lbl||cmd, icon:ic||guessIcon(cmd), command:cmd, cols:cols||1, haptics:true}};
+}
+function mkNav(type,cmds) {
+  const c=new Set(cmds);
+  return {type, props:{up:c.has('DirectionUp')?'DirectionUp':'',down:c.has('DirectionDown')?'DirectionDown':'',
+    left:c.has('DirectionLeft')?'DirectionLeft':'',right:c.has('DirectionRight')?'DirectionRight':'',
+    ok:c.has('OK')?'OK':c.has('Select')?'Select':'',cols:3}};
+}
+function mkVol(cmds) {
+  const c=new Set(cmds);
+  return {type:'volume', props:{up:c.has('VolumeUp')?'VolumeUp':'',mute:c.has('Mute')?'Mute':'',
+    down:c.has('VolumeDown')?'VolumeDown':'',cols:3}};
+}
+function mkNum() { return {type:'numpad',props:{zero:'0',cols:3}}; }
+function sec(title,...rows) { return {title, rows}; }
+function mkRow(...cells) { return {cells}; }
+
 function buildDefaultLayout(dev) {
-  const cids = new Set(dev.cmds);
-  const hasNav = cids.has('DirectionUp');
-  const hasNum = cids.has('0');
+  const cmds=dev.cmds, c=new Set(cmds), type=detectType(cmds);
+  const pw=[];
+  if(c.has('PowerToggle')) pw.push(mkBtn('PowerToggle','Power','mdi:power'));
+  else { if(c.has('PowerOn')) pw.push(mkBtn('PowerOn','An','mdi:power-on'));
+         if(c.has('PowerOff')) pw.push(mkBtn('PowerOff','Aus','mdi:power-off')); }
+  if(c.has('Mute')) pw.push(mkBtn('Mute','Mute','mdi:volume-mute'));
 
-  // Leeres Layout — Nutzer baut selbst auf
-  return [{title:'', rows:[]}];
+  if (type==='smart_tv') {
+    const media=[];
+    ['Netflix','Home','SmartMenu','Apps','Ambilight','Source'].forEach(x=>{
+      if(c.has(x)) media.push(mkBtn(x,x==='SmartMenu'?'Smart':x,guessIcon(x)));
+    });
+    const ch=[];
+    ['ChannelUp','ChannelDown','Guide','Info'].forEach(x=>{ if(c.has(x)) ch.push(mkBtn(x,null,guessIcon(x))); });
+    const col=[];
+    ['Red','Green','Yellow','Blue'].forEach(x=>{ if(c.has(x)) col.push(mkBtn(x,x.slice(0,3),guessIcon(x))); });
+    const inp=[...c].filter(x=>x.startsWith('InputHdmi')).map(x=>mkBtn(x,x.replace('InputHdmi','HDMI '),'mdi:hdmi-port'));
+    const result=[sec('Power',mkRow(...pw))];
+    if(media.length) result.push(sec('Streaming/Media',mkRow(...media)));
+    result.push(sec('Navigation',mkRow(mkNav('circlepad',cmds))));
+    result.push(sec('Lautstärke',mkRow(mkVol(cmds))));
+    if(ch.length)  result.push(sec('Kanäle',mkRow(...ch)));
+    if(c.has('0')) result.push(sec('Ziffern',mkRow(mkNum())));
+    if(inp.length) result.push(sec('Eingänge',mkRow(...inp)));
+    if(col.length) result.push(sec('Farbtasten',mkRow(...col)));
+    return result;
+  }
+  if (type==='satellite') {
+    const play=[];
+    ['Play','Pause','Stop','Record','FastForward','Rewind'].forEach(x=>{ if(c.has(x)) play.push(mkBtn(x,null,guessIcon(x))); });
+    const col=[];
+    ['Red','Green','Yellow','Blue'].forEach(x=>{ if(c.has(x)) col.push(mkBtn(x,x.slice(0,3),guessIcon(x))); });
+    const result=[sec('Power',mkRow(...pw)),sec('Navigation',mkRow(mkNav('dpad',cmds)))];
+    if(c.has('VolumeUp')) result.push(sec('Lautstärke',mkRow(mkVol(cmds))));
+    if(c.has('0')) result.push(sec('Ziffern',mkRow(mkNum())));
+    if(play.length) result.push(sec('Wiedergabe',mkRow(...play)));
+    if(col.length)  result.push(sec('Farbtasten',mkRow(...col)));
+    return result;
+  }
+  if (type==='streaming') {
+    const nav=[];
+    ['Home','Back','Menu','Guide','Apps'].forEach(x=>{ if(c.has(x)&&!pw.find(b=>b.props?.command===x)) nav.push(mkBtn(x,null,guessIcon(x))); });
+    const play=[];
+    ['Play','Pause','Stop','FastForward','Rewind'].forEach(x=>{ if(c.has(x)) play.push(mkBtn(x,null,guessIcon(x))); });
+    const result=[sec('Power/Nav',mkRow(...pw,...nav)),sec('Navigation',mkRow(mkNav('circlepad',cmds)))];
+    if(play.length) result.push(sec('Wiedergabe',mkRow(...play)));
+    return result;
+  }
+  if (type==='avr') {
+    const inp=[...c].filter(x=>x.startsWith('Input')).map(x=>mkBtn(x,x.replace('Input',''),'mdi:video-input-hdmi'));
+    const result=[sec('Power',mkRow(...pw)),sec('Lautstärke',mkRow(mkVol(cmds)))];
+    if(inp.length) result.push(sec('Eingänge',mkRow(...inp)));
+    if(c.has('DirectionUp')) result.push(sec('Navigation',mkRow(mkNav('dpad',cmds))));
+    return result;
+  }
+  // fan/generic
+  const extras=cmds.filter(x=>!['PowerOn','PowerOff','PowerToggle','Mute'].includes(x))
+    .map(x=>mkBtn(x,null,guessIcon(x)));
+  return [sec(dev.name,mkRow(...pw,...extras.slice(0,8)))];
 }
 
-// ── Section / Row / Cell hinzufügen ───────────────────────────────────────
-function addSection() {
-  sections.push({title:`Section ${sections.length+1}`, rows:[]});
-  renderCanvas();
+// ── Section / Row / Cell CRUD ─────────────────────────────────────────────
+function addSection() { sections.push({title:`Section ${sections.length+1}`,rows:[]}); renderCanvas(); }
+function addRow(si) {
+  si=si!==undefined?si:sections.length-1;
+  if(si<0){addSection();si=0;}
+  sections[si].rows.push({cells:[]}); renderCanvas();
 }
-function addRow(sIdx) {
-  const si = (sIdx !== undefined) ? sIdx : sections.length-1;
-  if (si < 0) { addSection(); sections[0].rows.push({cells:[]}); }
-  else sections[si].rows.push({cells:[]});
-  renderCanvas();
+function addCellToLast(type) {
+  if(!sections.length) addSection();
+  const si=sections.length-1;
+  if(!sections[si].rows.length) sections[si].rows.push({cells:[]});
+  const ri=sections[si].rows.length-1;
+  sections[si].rows[ri].cells.push(makeCell(type));
+  selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+  renderCmdList(); renderCanvas(); renderProps();
 }
-function addCell(type, sIdx, rIdx) {
-  if (!sections.length) addSection();
-  const si = (sIdx !== undefined) ? sIdx : sections.length-1;
-  const ri = (rIdx !== undefined) ? rIdx : sections[si].rows.length-1;
-  if (ri < 0) { sections[si].rows.push({cells:[]}); }
-  const row = sections[si].rows[Math.max(0,ri)];
-  const dev = currentDevice || {id:'dev', cmds:[]};
-  const cell = makeCell(type, dev);
-  row.cells.push(cell);
-  selectedPath = {sectionIdx:si, rowIdx:Math.max(0,ri), cellIdx:row.cells.length-1};
-  renderCanvas();
-  renderProps();
+function addCellAt(type,si,ri) {
+  sections[si].rows[ri].cells.push(makeCell(type));
+  renderCmdList(); renderCanvas();
 }
-
-function makeCell(type, dev) {
-  const base = {type, cols:1, haptics:true};
-  if (type === 'button')    return {...base, props:{name:`${dev.id}_btn`, label:'Button', icon:'', command:'', cols:1, haptics:true}};
-  if (type === 'spacer')    return {...base, props:{cols:1}};
-  if (type === 'circlepad') return {...base, props:{ok:'OK', up:'DirectionUp', down:'DirectionDown', left:'DirectionLeft', right:'DirectionRight', cols:3}};
-  if (type === 'dpad')      return {...base, props:{ok:'Select', up:'DirectionUp', down:'DirectionDown', left:'DirectionLeft', right:'DirectionRight', cols:3}};
-  if (type === 'numpad')    return {...base, props:{zero:'0', cols:3}};
-  if (type === 'volume')    return {...base, props:{up:'VolumeUp', mute:'Mute', down:'VolumeDown', cols:3}};
-  if (type === 'touchpad')  return {...base, props:{cols:4}};
-  if (type === 'slider')    return {...base, props:{min:0, max:100, step:1, cols:4}};
-  return base;
+function makeCell(type) {
+  const id=currentDevice?.id||'dev';
+  if(type==='button')    return {type,props:{name:`${id}_btn`,label:'Button',icon:'',command:'',cols:1,haptics:true}};
+  if(type==='spacer')    return {type,props:{cols:1}};
+  if(type==='circlepad') return {type,props:{up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'OK',cols:3}};
+  if(type==='dpad')      return {type,props:{up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'Select',cols:3}};
+  if(type==='numpad')    return {type,props:{zero:'0',cols:3}};
+  if(type==='volume')    return {type,props:{up:'VolumeUp',mute:'Mute',down:'VolumeDown',cols:3}};
+  if(type==='touchpad')  return {type,props:{cols:4}};
+  if(type==='slider')    return {type,props:{min:0,max:100,step:1,cols:4}};
+  return {type,props:{cols:1}};
 }
-
-function removeCell(si,ri,ci) {
-  sections[si].rows[ri].cells.splice(ci,1);
-  selectedPath = null;
-  renderCanvas(); renderProps();
-}
-function removeRow(si,ri) {
-  sections[si].rows.splice(ri,1);
-  selectedPath = null;
-  renderCanvas(); renderProps();
-}
-function removeSection(si) {
-  sections.splice(si,1);
-  selectedPath = null;
-  renderCanvas(); renderProps();
-}
-function moveRow(si, ri, dir) {
-  const rows = sections[si].rows;
-  const ni = ri+dir;
-  if (ni<0||ni>=rows.length) return;
-  [rows[ri],rows[ni]] = [rows[ni],rows[ri]];
-  renderCanvas();
-}
+function removeCell(si,ri,ci) { sections[si].rows[ri].cells.splice(ci,1); selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
+function removeRow(si,ri)     { sections[si].rows.splice(ri,1);           selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
+function removeSection(si)    { sections.splice(si,1);                     selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
+function moveRow(si,ri,d)     { const r=sections[si].rows,n=ri+d; if(n<0||n>=r.length)return; [r[ri],r[n]]=[r[n],r[ri]]; renderCanvas(); }
+function selectCell(si,ri,ci) { selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; renderCanvas(); renderProps(); }
 
 // ── Canvas rendern ─────────────────────────────────────────────────────────
 function renderCanvas() {
-  const canvas = document.getElementById('canvas');
-  if (!sections.length || sections.every(s=>!s.rows.length)) {
-    canvas.innerHTML = '<div class="canvas-empty">← Gerät wählen, dann Widgets per Klick hinzufügen</div>';
-    return;
+  const cv=document.getElementById('canvas');
+  if(!sections.length||sections.every(s=>!s.rows.length)) {
+    cv.innerHTML='<div class="canvas-empty">← Gerät wählen<br><br>Vorhandenes Layout wird automatisch geladen.<br>Sonst: Smart-Template als Start.</div>'; return;
   }
-  canvas.innerHTML = '';
-  sections.forEach((sec, si) => {
-    const sb = document.createElement('div');
-    sb.className = 'section-block';
-    sb.innerHTML = `
-      <div class="section-header">
-        <input value="${esc(sec.title)}" placeholder="Section-Name…"
-               style="background:none;border:none;color:#90caf9;font-size:.8rem;font-weight:600;flex:1;outline:none"
-               onchange="sections[${si}].title=this.value">
-        <button class="btn-icon" onclick="addRow(${si})" title="Reihe hinzufügen">＋ Reihe</button>
-        <button class="btn-icon" onclick="removeSection(${si})" title="Section löschen">🗑</button>
-      </div>`;
-    sec.rows.forEach((row, ri) => {
-      const rb = document.createElement('div');
-      rb.className = 'row-block';
-      rb.innerHTML = `<span class="row-num">${ri+1}</span>`;
-      const cells = document.createElement('div');
-      cells.className = 'cells';
-      row.cells.forEach((cell,ci) => {
-        const isSelected = selectedPath &&
-          selectedPath.sectionIdx===si && selectedPath.rowIdx===ri && selectedPath.cellIdx===ci;
-        const el = document.createElement('div');
-        el.className = `cell widget-${cell.type} ${cell.type==='spacer'?'spacer':''} ${isSelected?'selected':''}`;
-        el.style.flexBasis = `${((cell.props?.cols||1)/12)*100}%`;
-        el.innerHTML = `
-          <span class="cell-icon">${typeIcon(cell.type)}</span>
-          <span class="cell-label">${cellLabel(cell)}</span>
-          <span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
-        el.onclick = () => { selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; renderCanvas(); renderProps(); };
+  cv.innerHTML='';
+  sections.forEach((sec,si)=>{
+    const sb=document.createElement('div'); sb.className='section-block';
+    sb.innerHTML=`<div class="section-header">
+      <input class="section-title-input" value="${esc(sec.title)}" placeholder="Section-Name…" onchange="sections[${si}].title=this.value">
+      <button class="btn-icon" onclick="addRow(${si})">＋ Reihe</button>
+      <button class="btn-icon" onclick="removeSection(${si})">🗑</button></div>`;
+    sec.rows.forEach((row,ri)=>{
+      const rb=document.createElement('div'); rb.className='row-block';
+      const num=document.createElement('span'); num.className='row-num'; num.textContent=ri+1; rb.appendChild(num);
+      const cells=document.createElement('div'); cells.className='cells';
+      row.cells.forEach((cell,ci)=>{
+        const isSel=selectedPath&&selectedPath.sectionIdx===si&&selectedPath.rowIdx===ri&&selectedPath.cellIdx===ci;
+        const el=document.createElement('div');
+        el.className=`cell widget-${cell.type} ${cell.type==='spacer'?'spacer':''} ${isSel?'selected':''}`;
+        const cols=cell.props?.cols||1, gridCols=parseInt(document.getElementById('grid-cols').value||12);
+        el.style.flexBasis=`calc(${(cols/gridCols)*100}% - 6px)`;
+        el.innerHTML=cellHtml(cell)+`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
+        el.onclick=()=>selectCell(si,ri,ci);
         cells.appendChild(el);
       });
-      // +Button
-      const add = document.createElement('button');
-      add.className = 'row-add-cell';
-      add.textContent = '+';
-      add.title = 'Zelle hinzufügen';
-      add.onclick = () => addCell('button', si, ri);
-      cells.appendChild(add);
+      const add=document.createElement('button'); add.className='row-add-btn'; add.textContent='＋';
+      add.onclick=()=>addCellAt('button',si,ri); cells.appendChild(add);
       rb.appendChild(cells);
-      // Row-Aktionen
-      rb.innerHTML += `<div class="row-actions">
-        <button onclick="moveRow(${si},${ri},-1)" title="Hoch">▲</button>
-        <button onclick="moveRow(${si},${ri},1)" title="Runter">▼</button>
-        <button onclick="removeRow(${si},${ri})" title="Löschen">🗑</button>
-      </div>`;
-      rb.querySelector('.cells').appendChild(add);  // re-attach nach innerHTML
-      sb.appendChild(rb);
+      const acts=document.createElement('div'); acts.className='row-actions';
+      acts.innerHTML=`<button onclick="moveRow(${si},${ri},-1)">▲</button><button onclick="moveRow(${si},${ri},1)">▼</button><button onclick="removeRow(${si},${ri})">🗑</button>`;
+      rb.appendChild(acts); sb.appendChild(rb);
     });
-    canvas.appendChild(sb);
+    cv.appendChild(sb);
   });
 }
-
-function typeIcon(t) {
-  return {button:'🔘',spacer:'⬜',circlepad:'🔵',dpad:'🕹️',
-          numpad:'🔢',volume:'🔊',touchpad:'👆',slider:'🎚️'}[t]||'▪';
+function cellHtml(cell) {
+  const t=cell.type;
+  if(t==='spacer')    return `<span class="cell-label" style="color:#333">space</span>`;
+  if(t==='circlepad') return `<i class="cell-icon mdi mdi-circle-half-full" style="color:#4caf50"></i><span class="cell-label">Circle</span>`;
+  if(t==='dpad')      return `<i class="cell-icon mdi mdi-gamepad" style="color:#9c27b0"></i><span class="cell-label">D-Pad</span>`;
+  if(t==='numpad')    return `<i class="cell-icon mdi mdi-numeric" style="color:#ff5722"></i><span class="cell-label">Num</span>`;
+  if(t==='volume')    return `<i class="cell-icon mdi mdi-volume-high" style="color:#00bcd4"></i><span class="cell-label">Vol</span>`;
+  if(t==='touchpad')  return `<span class="cell-label">Touch</span>`;
+  if(t==='slider')    return `<span class="cell-label">Slider</span>`;
+  const ic=cell.props?.icon||'', lbl=cell.props?.label||cell.props?.command||'?';
+  if(ic) return `<i class="cell-icon mdi ${ic.replace('mdi:','mdi-')}"></i><span class="cell-label">${esc(lbl)}</span>`;
+  return `<span class="cell-label">${esc(lbl)}</span>`;
 }
-function cellLabel(cell) {
-  if (cell.type==='spacer') return '&nbsp;';
-  if (cell.type==='circlepad') return 'Circle';
-  if (cell.type==='dpad') return 'D-Pad';
-  if (cell.type==='numpad') return 'Num';
-  if (cell.type==='volume') return 'Vol';
-  return cell.props?.label || cell.props?.name || cell.type;
-}
-function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 
-// ── Eigenschaften-Panel ────────────────────────────────────────────────────
+// ── Properties-Panel ─────────────────────────────────────────────────────
 function renderProps() {
-  const panel = document.getElementById('props-content');
-  if (!selectedPath) { panel.innerHTML = '<span style="color:#555">Element auswählen…</span>'; return; }
-  const {sectionIdx:si, rowIdx:ri, cellIdx:ci} = selectedPath;
-  const cell = sections[si]?.rows[ri]?.cells[ci];
-  if (!cell) { panel.innerHTML = '<span style="color:#555">—</span>'; return; }
-  const cmds = currentDevice ? currentDevice.cmds : [];
-  const cmdOpts = cmds.map(c => `<option value="${c}" ${cell.props?.command===c?'selected':''}>${c}</option>`).join('');
+  const panel=document.getElementById('props-content');
+  if(!selectedPath){panel.innerHTML='<span style="color:#444">Element auswählen…</span>';return;}
+  const {sectionIdx:si,rowIdx:ri,cellIdx:ci}=selectedPath;
+  const cell=sections[si]?.rows[ri]?.cells[ci];
+  if(!cell){panel.innerHTML='<span style="color:#444">—</span>';return;}
+  const cmds=currentDevice?.cmds||[];
+  const gc=document.getElementById('grid-cols').value||12;
+  const typeOpts=['button','spacer','circlepad','dpad','numpad','volume','touchpad','slider']
+    .map(t=>`<option value="${t}" ${cell.type===t?'selected':''}>${t}</option>`).join('');
 
-  let html = `
-    <div class="prop-section-title">Typ</div>
-    <div class="prop-row">
-      <select onchange="changeType(this.value)">
-        ${['button','spacer','circlepad','dpad','numpad','volume','touchpad','slider']
-          .map(t=>`<option value="${t}" ${cell.type===t?'selected':''}>${t}</option>`).join('')}
-      </select>
-    </div>
-    <div class="prop-row">
-      <label>Breite (von 12 Spalten)</label>
-      <input type="range" min="1" max="12" value="${cell.props?.cols||1}"
-             oninput="setProp('cols',+this.value);document.getElementById('cols-val').textContent=this.value"
-             style="width:100%">
-      <span style="font-size:.75rem;color:#aaa">Spalten: <strong id="cols-val">${cell.props?.cols||1}</strong></span>
-    </div>`;
+  let html=`
+    <div class="prop-group"><label class="prop-label">Typ</label>
+      <select class="prop-input" onchange="changeType(this.value)">${typeOpts}</select></div>
+    <div class="prop-group"><label class="prop-label">Breite (${cell.props?.cols||1} / ${gc} Spalten)</label>
+      <input class="prop-input" type="range" min="1" max="${gc}" value="${cell.props?.cols||1}"
+             oninput="setProp('cols',+this.value);this.previousElementSibling.textContent='Breite ('+this.value+' / ${gc} Spalten)';renderCanvas()"></div>`;
 
-  if (cell.type === 'button') {
-    html += `
-      <div class="prop-section-title">Button</div>
-      <div class="prop-row">
-        <label>Label / Text</label>
-        <input type="text" value="${esc(cell.props?.label||'')}"
-               oninput="setProp('label',this.value);renderCanvas()">
-      </div>
-      <div class="prop-row">
-        <label>Icon (MDI)</label>
+  if(cell.type==='button') {
+    const cmdOpts='<option value="">— kein —</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.command===c?'selected':''}>${c}</option>`).join('');
+    html+=`
+      <div class="prop-sep">Button</div>
+      <div class="prop-group"><label class="prop-label">Command (Aktion)</label>
+        <select class="prop-input" onchange="onCmdChange(this.value)">${cmdOpts}</select></div>
+      <div class="prop-group"><label class="prop-label">Label / Text</label>
+        <input class="prop-input" type="text" value="${esc(cell.props?.label||'')}" oninput="setProp('label',this.value);renderCanvas()"></div>
+      <div class="prop-group"><label class="prop-label">Icon (MDI)</label>
         <div class="icon-picker">
-          <div class="icon-preview" onclick="toggleIconPicker()">
-            <span id="icon-prev-display" style="font-size:1.1rem">${iconChar(cell.props?.icon||'')}</span>
-            <span style="font-size:.8rem;flex:1">${cell.props?.icon||'— kein Icon —'}</span>
-            <span style="color:#666">▾</span>
-          </div>
+          <button type="button" class="icon-preview-btn" onclick="toggleIconPicker()">
+            <i class="mdi ${(cell.props?.icon||'mdi:remote').replace('mdi:','mdi-')}" id="icon-prev-i" style="font-size:1.1rem"></i>
+            <span style="font-size:.78rem;flex:1" id="icon-prev-name">${cell.props?.icon||'— kein —'}</span>
+            <span style="color:#555">▾</span>
+          </button>
           <div class="icon-dropdown" id="icon-dropdown">
-            <input class="icon-search" type="text" placeholder="Icon suchen…"
-                   oninput="searchIcons(this.value)" id="icon-search-input">
-            <div class="icon-grid" id="icon-grid"></div>
+            <input class="icon-search-inp" type="text" placeholder="Icon suchen… (z.B. power, home, play)"
+                   oninput="searchIconsDebounced(this.value)" id="icon-search-input" autocomplete="off">
+            <div id="icon-hint" class="icon-hint">7000+ MDI-Icons — tippe zum Suchen</div>
+            <div class="icon-grid-wrap" id="icon-grid" style="display:none"></div>
           </div>
         </div>
       </div>
-      <div class="prop-row">
-        <label>Command</label>
-        <select onchange="setProp('command',this.value)">
-          <option value="">— kein Command —</option>
-          ${cmdOpts}
-        </select>
-      </div>
-      <div class="prop-row">
-        <label style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" ${cell.props?.haptics?'checked':''} onchange="setProp('haptics',this.checked)">
-          Haptics (Vibration)
-        </label>
-      </div>`;
+      <div class="prop-group"><label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#aaa;cursor:pointer">
+        <input type="checkbox" ${cell.props?.haptics?'checked':''} onchange="setProp('haptics',this.checked)">Haptics</label></div>`;
   }
-  if (['circlepad','dpad'].includes(cell.type)) {
-    html += `<div class="prop-section-title">Richtungs-Commands</div>`;
-    ['up','down','left','right','ok'].forEach(dir => {
-      html += `<div class="prop-row">
-        <label>${ ({up:'▲ Hoch',down:'▼ Runter',left:'◀ Links',right:'▶ Rechts',ok:'⭕ OK'})[dir] }</label>
-        <select onchange="setProp('${dir}',this.value)">
-          <option value="">—</option>
-          ${cmds.map(c=>`<option value="${c}" ${cell.props?.[dir]===c?'selected':''}>${c}</option>`).join('')}
-        </select></div>`;
+  const dirPairs=[['up','▲ Hoch'],['down','▼ Runter'],['left','◀ Links'],['right','▶ Rechts'],['ok','⭕ OK/Select']];
+  if(['circlepad','dpad'].includes(cell.type)) {
+    html+=`<div class="prop-sep">Richtungs-Commands</div>`;
+    dirPairs.forEach(([k,lbl])=>{
+      const o='<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.[k]===c?'selected':''}>${c}</option>`).join('');
+      html+=`<div class="prop-group"><label class="prop-label">${lbl}</label><select class="prop-input" onchange="setProp('${k}',this.value);renderCmdList()">${o}</select></div>`;
     });
   }
-  if (cell.type === 'volume') {
-    html += `<div class="prop-section-title">Volume-Commands</div>`;
-    ['up','mute','down'].forEach(k => {
-      html += `<div class="prop-row">
-        <label>${ ({up:'Vol +',mute:'Mute',down:'Vol -'})[k] }</label>
-        <select onchange="setProp('${k}',this.value)">
-          ${cmds.map(c=>`<option value="${c}" ${cell.props?.[k]===c?'selected':''}>${c}</option>`).join('')}
-        </select></div>`;
+  if(cell.type==='volume') {
+    html+=`<div class="prop-sep">Volume</div>`;
+    [['up','Vol ＋'],['mute','Mute'],['down','Vol ー']].forEach(([k,lbl])=>{
+      const o='<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.[k]===c?'selected':''}>${c}</option>`).join('');
+      html+=`<div class="prop-group"><label class="prop-label">${lbl}</label><select class="prop-input" onchange="setProp('${k}',this.value);renderCmdList()">${o}</select></div>`;
     });
   }
-  if (cell.type === 'numpad') {
-    html += `<div class="prop-section-title">Numpad</div>
-      <div class="prop-row"><label>Command für 0</label>
-        <select onchange="setProp('zero',this.value)">
-          ${cmds.map(c=>`<option value="${c}" ${cell.props?.zero===c?'selected':''}>${c}</option>`).join('')}
-        </select></div>`;
+  if(cell.type==='numpad') {
+    html+=`<div class="prop-sep">Numpad</div>
+      <div class="prop-group"><label class="prop-label">Command für 0</label>
+      <select class="prop-input" onchange="setProp('zero',this.value)">${'<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.zero===c?'selected':''}>${c}</option>`).join('')}</select></div>`;
   }
-  panel.innerHTML = html;
-  // Icons initial laden
-  searchIcons('');
+  panel.innerHTML=html;
 }
 
-function setProp(key, val) {
-  if (!selectedPath) return;
-  const {sectionIdx:si, rowIdx:ri, cellIdx:ci} = selectedPath;
-  if (!sections[si]?.rows[ri]?.cells[ci]?.props) return;
-  sections[si].rows[ri].cells[ci].props[key] = val;
+function setProp(k,v){
+  if(!selectedPath)return;
+  const {sectionIdx:si,rowIdx:ri,cellIdx:ci}=selectedPath;
+  if(sections[si]?.rows[ri]?.cells[ci]?.props!=null) sections[si].rows[ri].cells[ci].props[k]=v;
 }
-function changeType(newType) {
-  if (!selectedPath) return;
-  const {sectionIdx:si, rowIdx:ri, cellIdx:ci} = selectedPath;
-  const dev = currentDevice||{id:'dev',cmds:[]};
-  const newCell = makeCell(newType, dev);
-  sections[si].rows[ri].cells[ci] = newCell;
-  renderCanvas(); renderProps();
+function changeType(t){
+  if(!selectedPath)return;
+  const {sectionIdx:si,rowIdx:ri,cellIdx:ci}=selectedPath;
+  sections[si].rows[ri].cells[ci]=makeCell(t);
+  renderCmdList();renderCanvas();renderProps();
+}
+function onCmdChange(cmd){
+  setProp('command',cmd);
+  if(!selectedPath)return;
+  const {sectionIdx:si,rowIdx:ri,cellIdx:ci}=selectedPath;
+  const p=sections[si].rows[ri].cells[ci].props;
+  // Auto-fill Label wenn noch default
+  if(!p.label||p.label==='Button'){setProp('label',cmd);const inp=document.querySelector('#props-content input[type=text]');if(inp)inp.value=cmd;}
+  // Auto-fill Icon wenn noch leer
+  if(!p.icon){const ic=guessIcon(cmd);if(ic){setProp('icon',ic);const pi=document.getElementById('icon-prev-i');const pn=document.getElementById('icon-prev-name');if(pi)pi.className=`mdi ${ic.replace('mdi:','mdi-')}`;if(pn)pn.textContent=ic;}}
+  renderCmdList();renderCanvas();
 }
 
-// ── Icon-Picker ────────────────────────────────────────────────────────────
-function toggleIconPicker() {
-  document.getElementById('icon-dropdown').classList.toggle('open');
-  document.getElementById('icon-search-input')?.focus();
+// ── Icon-Picker ───────────────────────────────────────────────────────────
+let _iconTimer=null;
+function toggleIconPicker(){
+  const dd=document.getElementById('icon-dropdown');
+  dd.classList.toggle('open');
+  if(dd.classList.contains('open')) document.getElementById('icon-search-input').focus();
 }
-async function searchIcons(q) {
-  const res = await fetch(`/api/mdi-search?q=${encodeURIComponent(q)}`);
-  const icons = await res.json();
-  document.getElementById('icon-grid').innerHTML = icons.map(ic =>
-    `<div class="icon-opt" onclick="selectIcon('${ic}')" title="${ic}">
-      <span>${iconChar(ic)}</span>
-      <span>${ic.replace('mdi:','')}</span>
-    </div>`).join('');
+function searchIconsDebounced(q){clearTimeout(_iconTimer);_iconTimer=setTimeout(()=>_doSearch(q),280);}
+async function _doSearch(q){
+  const grid=document.getElementById('icon-grid'), hint=document.getElementById('icon-hint');
+  if(!q||q.length<1){grid.style.display='none';hint.style.display='block';hint.textContent='Tippe mindestens 1 Zeichen…';return;}
+  hint.textContent='Suche…';hint.style.display='block';grid.style.display='none';
+  try{
+    const res=await fetch(`/api/mdi-search?q=${encodeURIComponent(q)}&n=84`);
+    const icons=await res.json();
+    if(!icons.length){hint.textContent='Keine Icons gefunden.';return;}
+    grid.innerHTML=icons.map(ic=>{
+      const cls=ic.replace('mdi:','mdi-');
+      return `<div class="icon-opt" onclick="selectIcon('${ic}')" title="${ic}"><i class="mdi ${cls}"></i><span>${ic.replace('mdi:','').slice(0,9)}</span></div>`;
+    }).join('');
+    hint.style.display='none';grid.style.display='grid';
+  }catch(e){hint.textContent='Fehler: '+e;}
 }
-function selectIcon(ic) {
-  setProp('icon', ic);
-  document.getElementById('icon-prev-display').textContent = iconChar(ic);
+function selectIcon(ic){
+  setProp('icon',ic);
+  const pi=document.getElementById('icon-prev-i'),pn=document.getElementById('icon-prev-name');
+  if(pi)pi.className=`mdi ${ic.replace('mdi:','mdi-')}`;
+  if(pn)pn.textContent=ic;
   document.getElementById('icon-dropdown').classList.remove('open');
-  // Label im Props-Panel aktualisieren
-  const lbl = document.querySelector('#props-content input[type=text]');
-  if (lbl) lbl.parentElement.previousElementSibling?.querySelector('span:nth-child(2)')?.textContent;
   renderCanvas();
 }
-function iconChar(mdi) {
-  // Fallback: zeige Icon-Name-Emoji oder Platzhalter
-  if (!mdi) return '▪';
-  const map = {
-    'mdi:power':'⏻','mdi:home':'🏠','mdi:home-outline':'🏠',
-    'mdi:play':'▶','mdi:pause':'⏸','mdi:stop':'⏹',
-    'mdi:volume-plus':'🔊','mdi:volume-minus':'🔉','mdi:volume-mute':'🔇',
-    'mdi:arrow-up':'▲','mdi:arrow-down':'▼','mdi:arrow-left':'◀','mdi:arrow-right':'▶',
-    'mdi:chevron-up':'˄','mdi:chevron-down':'˅',
-    'mdi:menu':'☰','mdi:apps':'⊞','mdi:close':'✕','mdi:circle':'●',
-    'mdi:rewind':'⏪','mdi:fast-forward':'⏩','mdi:skip-previous':'⏮','mdi:skip-next':'⏭',
-    'mdi:record-rec':'⏺','mdi:microphone':'🎤',
-    'mdi:netflix':'N','mdi:spotify':'S','mdi:youtube':'▶',
-    'mdi:bluetooth':'⛶','mdi:radio':'📻','mdi:television':'📺',
-  };
-  return map[mdi] || mdi.replace('mdi:','').slice(0,2).toUpperCase();
-}
-function guessIcon(cmd) {
-  const map = {
-    PowerToggle:'mdi:power',PowerOn:'mdi:power-on',PowerOff:'mdi:power-off',
-    Home:'mdi:home-outline',Back:'mdi:arrow-left-circle',Menu:'mdi:menu',
-    Apps:'mdi:apps',Guide:'mdi:television-guide',
-    Play:'mdi:play',Pause:'mdi:pause',Stop:'mdi:stop',
-    Rewind:'mdi:rewind',FastForward:'mdi:fast-forward',
-    SkipBack:'mdi:skip-previous',SkipForward:'mdi:skip-next',
+// Klick außerhalb schließt Picker
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('icon-dropdown');
+  if(dd&&!dd.closest('.icon-picker')?.contains(e.target)) dd.classList.remove('open');
+});
+
+// ── guessIcon ─────────────────────────────────────────────────────────────
+function guessIcon(cmd){
+  const map={PowerToggle:'mdi:power',PowerOn:'mdi:power-on',PowerOff:'mdi:power-off',
+    Home:'mdi:home-outline',Back:'mdi:arrow-left-circle',Menu:'mdi:menu',Exit:'mdi:close-circle',
+    Apps:'mdi:apps',Guide:'mdi:television-guide',Info:'mdi:information-outline',Settings:'mdi:cog-outline',Source:'mdi:import',
+    Play:'mdi:play',Pause:'mdi:pause',Stop:'mdi:stop',Record:'mdi:record-rec',
+    Rewind:'mdi:rewind',FastForward:'mdi:fast-forward',SkipBack:'mdi:skip-previous',SkipForward:'mdi:skip-next',
+    SkipBackward:'mdi:skip-previous',
     VolumeUp:'mdi:volume-plus',VolumeDown:'mdi:volume-minus',Mute:'mdi:volume-mute',
-    Record:'mdi:record-rec',
-    DirectionUp:'mdi:chevron-up',DirectionDown:'mdi:chevron-down',
-    DirectionLeft:'mdi:chevron-left',DirectionRight:'mdi:chevron-right',
-    OK:'mdi:circle',Select:'mdi:circle',
-    '0':'mdi:numeric-0','1':'mdi:numeric-1','2':'mdi:numeric-2',
-  };
-  return map[cmd]||'';
+    ChannelUp:'mdi:chevron-up',ChannelDown:'mdi:chevron-down',ChannelPrev:'mdi:replay',
+    DirectionUp:'mdi:chevron-up',DirectionDown:'mdi:chevron-down',DirectionLeft:'mdi:chevron-left',DirectionRight:'mdi:chevron-right',
+    OK:'mdi:circle',Select:'mdi:circle',Enter:'mdi:keyboard-return',
+    Subtitle:'mdi:subtitles-outline',Teletext:'mdi:text',List:'mdi:format-list-bulleted',
+    Red:'mdi:square-rounded',Green:'mdi:square-rounded',Yellow:'mdi:square-rounded',Blue:'mdi:square-rounded',
+    Netflix:'mdi:netflix',Ambilight:'mdi:lightbulb-outline',SmartMenu:'mdi:television-play',
+    Sleep:'mdi:sleep',Timer:'mdi:timer-outline',Delete:'mdi:backspace-outline',MyPause:'mdi:motion-pause',
+    Speed:'mdi:fan-speed-1',Swing:'mdi:weather-windy',
+    '0':'mdi:numeric-0','1':'mdi:numeric-1','2':'mdi:numeric-2','3':'mdi:numeric-3',
+    '4':'mdi:numeric-4','5':'mdi:numeric-5','6':'mdi:numeric-6','7':'mdi:numeric-7',
+    '8':'mdi:numeric-8','9':'mdi:numeric-9'};
+  if(map[cmd]) return map[cmd];
+  if(cmd.startsWith('InputHdmi')) return 'mdi:hdmi-port';
+  if(cmd.startsWith('Input'))     return 'mdi:video-input-component';
+  return '';
 }
 
-// ── Exportieren als URC rows/custom_actions ─────────────────────────────────
-function exportLayout() {
-  if (!currentDevice) return null;
-  const dev  = currentDevice;
-  const bk   = dev.backend?.harmony || {};
-  const devId = bk.device_id || bk.device;
-  const hubEnt = MODEL.hubs.find(h=>true)?.entity || '';
-
-  const rows   = [];
-  const acts   = [];
-  const actNames = new Set();
-
-  sections.forEach(sec => {
-    if (sec.title) rows.push({__section: sec.title});  // Marker (wird ggf. als null gerendert)
-    sec.rows.forEach(row => {
-      const rowRef = [];
-      row.cells.forEach(cell => {
-        if (cell.type === 'spacer') {
-          rowRef.push(null);
+// ── Export → URC ──────────────────────────────────────────────────────────
+function exportLayout(){
+  if(!currentDevice) return null;
+  const dev=currentDevice, bk=dev.backend?.harmony||{};
+  const devId=bk.device_id||bk.device, hubEnt=MODEL.hubs?.[0]?.entity||'';
+  const rows=[], acts=[], seen=new Set();
+  sections.forEach(sec=>{
+    if(sec.title) rows.push(`##${sec.title}`);
+    sec.rows.forEach(row=>{
+      const rowRef=[];
+      row.cells.forEach(cell=>{
+        if(cell.type==='spacer'){rowRef.push(null);return;}
+        if(cell.type==='button'){
+          const name=cell.props.name||`${dev.id}_btn`; rowRef.push(name);
+          if(!seen.has(name)){seen.add(name);
+            const a={type:'button',name,haptics:!!cell.props.haptics};
+            if(cell.props.label) a.label=cell.props.label;
+            if(cell.props.icon)  a.icon=cell.props.icon;
+            if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+            acts.push(a);}
           return;
         }
-        if (cell.type === 'button') {
-          const name = cell.props.name || `${dev.id}_btn`;
-          rowRef.push(name);
-          if (!actNames.has(name)) {
-            actNames.add(name);
-            const a = {type:'button', name, haptics:!!cell.props.haptics};
-            if (cell.props.label)   a.label = cell.props.label;
-            if (cell.props.icon)    a.icon  = cell.props.icon;
-            if (cell.props.command) a.tap_action = {
-              action:'perform-action', perform_action:'remote.send_command',
-              target:{entity_id: hubEnt},
-              data:{device: devId, command: cell.props.command}
-            };
-            acts.push(a);
-          }
+        if(['circlepad','dpad'].includes(cell.type)){
+          const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
+          if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+            const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
+            const a={type:cell.type,name:wn,haptics:true};
+            if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
+            if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
+            if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
+            acts.push(a);}
           return;
         }
-        if (['circlepad','dpad'].includes(cell.type)) {
-          rowRef.push(cell.type);
-          if (!actNames.has(cell.type)) {
-            actNames.add(cell.type);
-            const p = cell.props||{};
-            const a = {type: cell.type, name: cell.type, haptics:true};
-            const mkAct = (cmd) => cmd ? {tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}} : {};
-            a.up    = mkAct(p.up);
-            a.down  = mkAct(p.down);
-            a.left  = mkAct(p.left);
-            a.right = mkAct(p.right);
-            if (p.ok) a.tap_action = {action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-            acts.push(a);
-          }
+        if(cell.type==='numpad'){
+          rowRef.push('numpad');
+          for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
+          const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);acts.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
           return;
         }
-        if (cell.type === 'numpad') {
-          rowRef.push('numpad');  // URC built-in
-          // Zahlen 1-9 + 0
-          for (let n=1;n<=9;n++) {
-            const name = `${dev.id}_${n}`;
-            if (!actNames.has(name)) {
-              actNames.add(name);
-              acts.push({type:'button',name,icon:`mdi:numeric-${n}`,haptics:true,
-                tap_action:{action:'perform-action',perform_action:'remote.send_command',
-                  target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});
-            }
-          }
-          const p = cell.props||{};
-          const z = `${dev.id}_zero`;
-          if (!actNames.has(z)) {
-            actNames.add(z);
-            acts.push({type:'button',name:z,icon:'mdi:numeric-0',haptics:true,
-              tap_action:{action:'perform-action',perform_action:'remote.send_command',
-                target:{entity_id:hubEnt},data:{device:devId,command:p.zero||'0'}}});
-          }
-          return;
+        if(cell.type==='volume'){
+          const p=cell.props||{};
+          [['up','Vol +','mdi:volume-plus'],['mute','Mute','mdi:volume-mute'],['down','Vol -','mdi:volume-minus']].forEach(([k,lbl,ic])=>{
+            const nm=`${dev.id}_vol_${k}`;rowRef.push(nm);
+            if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
+          });return;
         }
-        if (cell.type === 'volume') {
-          const p = cell.props||{};
-          ['up','mute','down'].forEach((k,i) => {
-            const label = {up:'Vol +',mute:'Mute',down:'Vol -'}[k];
-            const icon  = {up:'mdi:volume-plus',mute:'mdi:volume-mute',down:'mdi:volume-minus'}[k];
-            const name  = `${dev.id}_vol_${k}`;
-            rowRef.push(name);
-            if (!actNames.has(name)) {
-              actNames.add(name);
-              acts.push({type:'button',name,label,icon,haptics:true,
-                tap_action:{action:'perform-action',perform_action:'remote.send_command',
-                  target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});
-            }
-          });
-          return;
-        }
-        // Alle anderen: als Button mit Name
-        const name = `${dev.id}_${cell.type}`;
-        rowRef.push(name);
+        rowRef.push(`${dev.id}_${cell.type}`);
       });
       rows.push(rowRef);
     });
   });
-  return {rows, custom_actions: acts};
+  return {rows,custom_actions:acts};
 }
 
-// ── Speichern & Deployen ───────────────────────────────────────────────────
-async function saveAndDeploy() {
-  const layout = exportLayout();
-  if (!layout) { alert('Kein Gerät / kein Layout'); return; }
-  const st = document.getElementById('deploy-status');
-  st.innerHTML = '<span class="status info"><span class="spinner"></span> Speichere Layout…</span>';
-
-  // Layout speichern + Karte generieren
-  const r1 = await fetch('/api/save-layout', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({room_id:ROOM_ID, device_id:currentDevice.id, ...layout})
-  });
-  const d1 = await r1.json();
-  if (!d1.ok) {
-    st.innerHTML = `<span class="status err">Fehler beim Speichern: ${d1.stderr||''}</span>`; return;
-  }
-
-  // In HA deployen
-  st.innerHTML = '<span class="status info"><span class="spinner"></span> Deploye in HA…</span>';
-  const r2 = await fetch('/api/deploy', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({room_id: ROOM_ID})
-  });
-  const d2 = await r2.json();
-  if (d2.ok) {
-    st.innerHTML = `<span class="status ok">✅ In HA deployed! Views: ${d2.views_deployed?.join(', ')}</span>`;
-  } else {
-    st.innerHTML = `<span class="status err">Deploy-Fehler: ${d2.error}</span>`;
-  }
+// ── Save & Deploy ──────────────────────────────────────────────────────────
+async function saveAndDeploy(){
+  const layout=exportLayout();
+  if(!layout){alert('Kein Gerät gewählt.');return;}
+  const st=document.getElementById('deploy-status');
+  st.innerHTML='<span class="status info"><span class="spinner"></span> Speichere…</span>';
+  const r1=await fetch('/api/save-layout',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({room_id:ROOM_ID,device_id:currentDevice.id,sections,...layout})});
+  const d1=await r1.json();
+  if(!d1.ok){st.innerHTML=`<span class="status err">Fehler: ${d1.error||''}</span>`;return;}
+  document.getElementById('saved-indicator').style.display='inline-flex';
+  st.innerHTML='<span class="status info"><span class="spinner"></span> Deploye in HA…</span>';
+  const r2=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({room_id:ROOM_ID})});
+  const d2=await r2.json();
+  st.innerHTML=d2.ok?`<span class="status ok">✅ Deployed: ${d2.views_deployed?.join(', ')||'ok'}</span>`
+                    :`<span class="status err">❌ ${d2.error}</span>`;
 }
 </script>
 </body>
