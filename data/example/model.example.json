@@ -11,68 +11,36 @@
     {
       "id": "tv",
       "name": "TV",
+      "backend": { "harmony": { "device": "Beispiel-Fernseher" } },
       "commands": [
-        {
-          "id": "PowerToggle",
-          "label": "Power"
-        },
-        {
-          "id": "VolumeUp",
-          "label": "Vol +"
-        },
-        {
-          "id": "VolumeDown",
-          "label": "Vol -"
-        },
-        {
-          "id": "Mute",
-          "label": "Mute"
-        }
+        { "id": "PowerToggle", "label": "Power" },
+        { "id": "VolumeUp", "label": "Vol +" },
+        { "id": "VolumeDown", "label": "Vol -" },
+        { "id": "Mute", "label": "Mute" }
       ]
     },
     {
       "id": "avr",
       "name": "AV-Receiver",
+      "backend": { "harmony": { "device": "Beispiel-AV-Receiver" } },
       "commands": [
-        {
-          "id": "PowerToggle",
-          "label": "Power"
-        },
-        {
-          "id": "VolumeUp",
-          "label": "Vol +"
-        },
-        {
-          "id": "VolumeDown",
-          "label": "Vol -"
-        }
+        { "id": "PowerToggle", "label": "Power" },
+        { "id": "VolumeUp", "label": "Vol +" },
+        { "id": "VolumeDown", "label": "Vol -" }
       ]
     },
     {
       "id": "streamer",
       "name": "Streaming-Box",
+      "backend": { "harmony": { "device": "Beispiel-Streamer" } },
       "commands": [
-        {
-          "id": "DirectionUp"
-        },
-        {
-          "id": "DirectionDown"
-        },
-        {
-          "id": "DirectionLeft"
-        },
-        {
-          "id": "DirectionRight"
-        },
-        {
-          "id": "Select"
-        },
-        {
-          "id": "Back"
-        },
-        {
-          "id": "Home"
-        }
+        { "id": "DirectionUp" },
+        { "id": "DirectionDown" },
+        { "id": "DirectionLeft" },
+        { "id": "DirectionRight" },
+        { "id": "Select" },
+        { "id": "Back" },
+        { "id": "Home" }
       ]
     }
   ],
@@ -81,12 +49,9 @@
       "id": "tv",
       "name": "TV schauen",
       "hub": "wz",
+      "backend": { "harmony": { "activity": "Beispiel-Activity" } },
       "primaryDevice": "streamer",
-      "devices": [
-        "tv",
-        "avr",
-        "streamer"
-      ]
+      "devices": ["tv", "avr", "streamer"]
     }
   ]
 }

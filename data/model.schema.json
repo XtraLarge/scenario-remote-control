@@ -1,44 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "scenario-remote-control model",
+  "description": "Backend-unabhaengiges Modell: hubs, devices (+commands), scenarios (Szenario = Activity, mit Geraete-Roster). Backend-spezifische Bezeichner liegen ausschliesslich im 'backend'-Binding, damit ein Backend-Wechsel nur die Backend-Auswahl beruehrt (nicht das Modell).",
   "type": "object",
-  "required": [
-    "hubs",
-    "devices",
-    "scenarios"
-  ],
+  "required": ["hubs", "devices", "scenarios"],
   "properties": {
     "hubs": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "backend"
-        ],
+        "required": ["id", "name", "backend"],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
+          "id": { "type": "string" },
+          "name": { "type": "string", "description": "Anzeigename (z.B. Raum)" },
           "backend": {
             "type": "string",
-            "enum": [
-              "harmony",
-              "broadlink",
-              "esphome-ir",
-              "unfolded-circle",
-              "sofabaton",
-              "native"
-            ]
+            "enum": ["harmony", "broadlink", "esphome-ir", "unfolded-circle", "sofabaton", "native"]
           },
-          "entity": {
-            "type": "string",
-            "description": "HA remote entity (backend-spezifisch)"
-          }
+          "entity": { "type": "string", "description": "HA remote-Entity (backend-spezifisch)" }
         }
       }
     },
@@ -46,35 +25,24 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "commands"
-        ],
+        "required": ["id", "name", "commands"],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
+          "id": { "type": "string", "description": "stabile, backend-unabhaengige Geraete-id (Modell-intern)" },
+          "name": { "type": "string", "description": "Anzeigename (Karten-Titel)" },
+          "backend": {
+            "type": "object",
+            "description": "backend-spezifische Bindungen, keyed nach Backend-Name. Bsp harmony: {\"device\": \"<Backend-Geraetename>\"}",
+            "additionalProperties": { "type": "object" }
           },
           "commands": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "id"
-              ],
+              "required": ["id"],
               "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "icon": {
-                  "type": "string"
-                }
+                "id": { "type": "string", "description": "kanonische Command-id (harmony nutzt sie direkt; andere Backends mappen sie in P4)" },
+                "label": { "type": "string" },
+                "icon": { "type": "string" }
               }
             }
           }
@@ -85,31 +53,21 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "hub",
-          "devices"
-        ],
+        "required": ["id", "name", "hub", "devices"],
         "properties": {
-          "id": {
-            "type": "string"
+          "id": { "type": "string" },
+          "name": { "type": "string", "description": "Anzeigename des Szenarios" },
+          "hub": { "type": "string", "description": "hub-id" },
+          "backend": {
+            "type": "object",
+            "description": "backend-spezifische Bindungen. Bsp harmony: {\"activity\": \"WZ SKY\"}",
+            "additionalProperties": { "type": "object" }
           },
-          "name": {
-            "type": "string"
-          },
-          "hub": {
-            "type": "string"
-          },
-          "primaryDevice": {
-            "type": "string"
-          },
+          "primaryDevice": { "type": "string", "description": "device-id des Hauptgeraets (Fokus der Fernbedienung)" },
           "devices": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "beteiligte device-ids (Roster)"
+            "items": { "type": "string" },
+            "description": "beteiligte device-ids (Roster) — genau diese FB werden bei aktivem Szenario eingeblendet"
           }
         }
       }
