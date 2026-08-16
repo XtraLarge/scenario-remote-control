@@ -6,3 +6,4 @@ harmony_*.conf
 .venv/
 __pycache__/
 *.pyc
+/cards/local/

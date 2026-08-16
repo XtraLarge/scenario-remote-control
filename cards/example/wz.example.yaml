@@ -1,0 +1,198 @@
+# Generiert von generator/build_cards.py (scenario-remote-control)
+# NICHT manuell editieren — Quelle: data/example/model.example.json
+# P2: Geraete-Cards statisch (alle sichtbar) — conditional Einblendung kommt P3
+
+views:
+- title: Wohnzimmer
+  path: fb-wz
+  icon: mdi:sofa
+  cards:
+  - type: horizontal-stack
+    cards:
+    - type: button
+      name: TV schauen
+      icon: mdi:play-circle
+      tap_action:
+        action: perform-action
+        perform_action: remote.turn_on
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          activity: Beispiel-Activity
+    - type: button
+      name: Aus
+      icon: mdi:power-off
+      tap_action:
+        action: perform-action
+        perform_action: remote.turn_off
+        target:
+          entity_id: remote.beispiel_hub
+  - type: grid
+    title: TV
+    columns: 4
+    square: false
+    cards:
+    - type: button
+      name: Power
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Fernseher
+          command: PowerToggle
+      icon: mdi:power
+    - type: button
+      name: Vol +
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Fernseher
+          command: VolumeUp
+      icon: mdi:volume-plus
+    - type: button
+      name: Vol -
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Fernseher
+          command: VolumeDown
+      icon: mdi:volume-minus
+    - type: button
+      name: Mute
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Fernseher
+          command: Mute
+      icon: mdi:volume-mute
+  - type: grid
+    title: AV-Receiver
+    columns: 4
+    square: false
+    cards:
+    - type: button
+      name: Power
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-AV-Receiver
+          command: PowerToggle
+      icon: mdi:power
+    - type: button
+      name: Vol +
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-AV-Receiver
+          command: VolumeUp
+      icon: mdi:volume-plus
+    - type: button
+      name: Vol -
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-AV-Receiver
+          command: VolumeDown
+      icon: mdi:volume-minus
+  - type: grid
+    title: Streaming-Box
+    columns: 4
+    square: false
+    cards:
+    - type: button
+      name: ▲
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: DirectionUp
+      icon: mdi:arrow-up
+    - type: button
+      name: ▼
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: DirectionDown
+      icon: mdi:arrow-down
+    - type: button
+      name: ◀
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: DirectionLeft
+      icon: mdi:arrow-left
+    - type: button
+      name: ▶
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: DirectionRight
+      icon: mdi:arrow-right
+    - type: button
+      name: OK
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: Select
+      icon: mdi:checkbox-marked-circle
+    - type: button
+      name: Back
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: Back
+      icon: mdi:arrow-left-circle
+    - type: button
+      name: Home
+      tap_action:
+        action: perform-action
+        perform_action: remote.send_command
+        target:
+          entity_id: remote.beispiel_hub
+        data:
+          device: Beispiel-Streamer
+          command: Home
+      icon: mdi:home
