@@ -277,10 +277,12 @@ def api_deploy():
             return jsonify({"error": "Lovelace Config nicht lesbar"}), 500
         config = cfg_r["result"]
 
-        # Views: NUR anhängen — NIEMALS vorhandene überschreiben
+        # Views: eigene -gen Pfade ersetzen; fremde Pfade nie überschreiben
         existing = config.get("views", [])
         existing_paths = {v.get("path") for v in existing}
-        conflicts = [nv.get("path") for nv in new_views if nv.get("path") in existing_paths]
+        new_paths = {nv.get("path") for nv in new_views}
+        # Konflikt nur bei Pfaden, die NICHT mit -gen enden (Nutzerdaten)
+        conflicts = [p for p in new_paths if p in existing_paths and not str(p).endswith("-gen")]
         if conflicts:
             ws.close()
             return jsonify({
@@ -288,7 +290,8 @@ def api_deploy():
                          f"Bitte zuerst die alte Seite umbenennen oder löschen.",
                 "conflict_paths": conflicts
             }), 409
-        config["views"] = existing + new_views
+        # -gen Views ersetzen, alle anderen behalten
+        config["views"] = [v for v in existing if v.get("path") not in new_paths] + new_views
 
         # Speichern
         ws.send(json.dumps({"id": 2, "type": "lovelace/config/save", "config": config}))
@@ -342,8 +345,7 @@ def api_save_layout():
     card_path  = os.path.join(CARDS, f"{room_id}.yaml")
     r = subprocess.run(
         [sys.executable, os.path.join(GEN, "build_cards.py"),
-         "--model", model_path, "--out", card_path,
-         "--layout", layout_path],
+         "--model", model_path, "--out", card_path],
         capture_output=True, text=True, cwd=REPO
     )
     return jsonify({"ok": r.returncode == 0, "stdout": r.stdout.strip(), "stderr": r.stderr[:300]})

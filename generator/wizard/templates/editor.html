@@ -15,26 +15,37 @@
     .props{background:#1e2128;border:1px solid #2d3142;border-radius:8px;padding:10px;overflow-y:auto}
     .section-block{background:#252830;border:1px solid #2d3142;border-radius:6px;padding:7px;margin-bottom:6px}
     .section-header{display:flex;align-items:center;gap:5px;margin-bottom:5px}
-    .section-title-input{background:none;border:none;color:#90caf9;font-size:.8rem;font-weight:600;flex:1;outline:none;padding:2px}
+    .section-title-input{background:none;border:none;border-bottom:1px solid transparent;color:#90caf9;font-size:.8rem;font-weight:600;flex:1;outline:none;padding:2px 4px;cursor:text}
+    .section-title-input:focus{border-bottom-color:#2196f3;background:#111318;border-radius:3px 3px 0 0}
     .section-title-input:hover{background:#1e2128;border-radius:3px}
     .btn-icon{background:none;border:none;color:#555;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:.85rem}
     .btn-icon:hover{color:#e1e1e1;background:#3d4156}
-    .row-block{display:flex;align-items:center;gap:3px;min-height:36px;padding:3px 4px;background:#1a1d24;border-radius:4px;border:1px dashed #2d3142;margin-bottom:3px}
+    /* ── Matrix-Grid ───────────────────────────────────────── */
+    .matrix-row-wrap{margin-bottom:6px}
+    .matrix-row-hdr{display:flex;align-items:center;gap:2px;padding:2px 2px 3px;border-bottom:1px solid #1e2130}
+    .matrix-row-hdr .row-num{font-size:.62rem;color:#555;min-width:18px;padding-right:4px}
+    .matrix-grid{display:grid;gap:3px;width:100%}
+    .matrix-cell{display:flex;align-items:center;justify-content:center;gap:3px;padding:6px 4px;
+      border-radius:5px;cursor:pointer;border:1px solid #3d4156;background:#252830;
+      font-size:.75rem;user-select:none;position:relative;min-height:42px;
+      transition:border-color .15s,background .15s}
+    .matrix-cell:hover{border-color:#90caf9}
+    .matrix-cell.selected{border-color:#2196f3;background:#0d1929;box-shadow:0 0 0 1px #2196f3}
+    .matrix-cell.dragging{opacity:.35;border-style:dashed}
+    .matrix-cell.drag-over{border-color:#ff9800;background:#1a1200}
+    .matrix-empty{display:flex;align-items:center;justify-content:center;min-height:42px;
+      border:1px dashed #3d4156;border-radius:5px;color:#3d4156;cursor:pointer;
+      font-size:1rem;transition:border-color .12s,background .12s,color .12s}
+    .matrix-empty:hover{border-color:#3d4156;color:#444;background:#1a1d24}
+    .matrix-empty.drag-over{border-color:#2196f3;background:#0d1929;color:#2196f3}
     .row-num{font-size:.62rem;color:#444;min-width:14px;text-align:right}
-    .cells{display:flex;gap:3px;flex:1;flex-wrap:wrap;align-items:center;min-height:28px}
-    .row-actions{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
-    .row-actions button{background:none;border:none;color:#444;cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1.4}
-    .row-actions button:hover{color:#e1e1e1}
-    .cell{display:flex;align-items:center;justify-content:center;gap:3px;padding:4px 7px;border-radius:5px;cursor:pointer;border:1px solid #3d4156;background:#252830;font-size:.75rem;white-space:nowrap;user-select:none;min-width:32px;position:relative;transition:border-color .15s}
-    .cell:hover{border-color:#90caf9}
-    .cell.selected{border-color:#2196f3;background:#0d1929;box-shadow:0 0 0 1px #2196f3}
     .cell.spacer{background:#111318;border-style:dashed;color:#333;font-size:.65rem}
     .cell.widget-circlepad{border-color:#4caf50}.cell.widget-dpad{border-color:#9c27b0}
     .cell.widget-numpad{border-color:#ff5722}.cell.widget-volume{border-color:#00bcd4}
     .cell-del{position:absolute;top:-6px;right:-6px;width:14px;height:14px;background:#c62828;color:#fff;border-radius:50%;font-size:.6rem;display:none;align-items:center;justify-content:center;cursor:pointer}
-    .cell:hover .cell-del{display:flex}
+    .cell:hover .cell-del,.matrix-cell:hover .cell-del{display:flex}
     .cell-icon{font-size:.95rem}.cell-label{font-size:.68rem;max-width:58px;overflow:hidden;text-overflow:ellipsis}
-    .row-add-btn{background:none;border:1px dashed #2d3142;color:#444;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.72rem;flex-shrink:0}
+    .row-add-btn{background:none;border:1px dashed #2d3142;color:#444;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.72rem;grid-column:span 1;justify-self:start;align-self:center}
     .row-add-btn:hover{border-color:#90caf9;color:#90caf9}
     .cell.dragging{opacity:.35;border-style:dashed}
     .cell.drag-over{outline:2px solid #2196f3;outline-offset:2px}
@@ -45,7 +56,7 @@
     .cell-move button{background:none;border:none;color:#90caf9;cursor:pointer;font-size:.65rem;padding:0 2px;line-height:1}
     .cell-move button:hover{color:#fff}
     .widget-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
-    .widget-item{display:flex;align-items:center;gap:6px;padding:7px 8px;background:#252830;border:1px solid #3d4156;border-radius:6px;cursor:pointer;font-size:.75rem}
+    .widget-item{display:flex;align-items:center;gap:6px;padding:7px 8px;background:#252830;border:1px solid #3d4156;border-radius:6px;cursor:grab;font-size:.75rem}
     .widget-item:hover{border-color:#90caf9;background:#2d3142}
     .cmd-chip{display:inline-flex;align-items:center;gap:3px;background:#1a1d24;border:1px solid #2d3142;border-radius:3px;padding:2px 6px;margin:2px;cursor:pointer;font-size:.72rem;transition:all .15s}
     .cmd-chip:hover{border-color:#90caf9;color:#fff}
@@ -79,14 +90,14 @@
     .preview-card{background:#1c1c1e;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto}
     .preview-section{display:flex;flex-direction:column;gap:6px}
     .preview-sec-title{font-size:.68rem;color:#666;text-transform:uppercase;letter-spacing:.08em;padding:0 2px}
-    .preview-row{display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .preview-row{display:flex;gap:4px;align-items:stretch;width:100%}
     .preview-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
       border-radius:8px;background:#2c2c2e;border:none;cursor:pointer;color:#e1e1e1;
-      padding:8px 4px;min-height:44px;font-size:.72rem;transition:background .15s;flex:1;max-width:80px}
+      padding:8px 4px;min-height:44px;font-size:.72rem;transition:background .15s;width:100%}
     .preview-btn:hover{background:#3a3a3c}
     .preview-btn i{font-size:1.15rem}
     .preview-btn span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-    .preview-spacer{flex:1;max-width:80px;min-height:44px}
+    .preview-spacer{min-height:44px}
     .preview-circlepad,.preview-dpad{position:relative;width:100px;height:100px;flex-shrink:0}
     .preview-circlepad .pcenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       width:34px;height:34px;border-radius:50%;background:#2196f3;display:flex;align-items:center;justify-content:center}
@@ -143,14 +154,14 @@
     <div class="panel">
       <div class="panel-title">Widgets</div>
       <div class="widget-grid">
-        <div class="widget-item" onclick="addCellToLast('button')"><i class="mdi mdi-gesture-tap" style="font-size:1.1rem;color:#90caf9"></i><span>Button</span></div>
-        <div class="widget-item" onclick="addCellToLast('spacer')"><i class="mdi mdi-border-none" style="font-size:1.1rem;color:#555"></i><span>Spacer</span></div>
-        <div class="widget-item" onclick="addCellToLast('circlepad')"><i class="mdi mdi-circle-half-full" style="font-size:1.1rem;color:#4caf50"></i><span>Circlepad</span></div>
-        <div class="widget-item" onclick="addCellToLast('dpad')"><i class="mdi mdi-gamepad" style="font-size:1.1rem;color:#9c27b0"></i><span>D-Pad</span></div>
-        <div class="widget-item" onclick="addCellToLast('numpad')"><i class="mdi mdi-numeric" style="font-size:1.1rem;color:#ff5722"></i><span>Numpad</span></div>
-        <div class="widget-item" onclick="addCellToLast('volume')"><i class="mdi mdi-volume-high" style="font-size:1.1rem;color:#00bcd4"></i><span>Volume</span></div>
-        <div class="widget-item" onclick="addCellToLast('touchpad')"><i class="mdi mdi-gesture-swipe" style="font-size:1.1rem;color:#ff9800"></i><span>Touchpad</span></div>
-        <div class="widget-item" onclick="addCellToLast('slider')"><i class="mdi mdi-tune-vertical" style="font-size:1.1rem;color:#8bc34a"></i><span>Slider</span></div>
+        <div class="widget-item" data-type="button"    draggable="true" onclick="addCellToLast('button')"><i class="mdi mdi-gesture-tap" style="font-size:1.1rem;color:#90caf9"></i><span>Button</span></div>
+        <div class="widget-item" data-type="spacer"     draggable="true" onclick="addCellToLast('spacer')"><i class="mdi mdi-border-none" style="font-size:1.1rem;color:#555"></i><span>Spacer</span></div>
+        <div class="widget-item" data-type="circlepad"  draggable="true" onclick="addCellToLast('circlepad')"><i class="mdi mdi-circle-half-full" style="font-size:1.1rem;color:#4caf50"></i><span>Circlepad</span></div>
+        <div class="widget-item" data-type="dpad"       draggable="true" onclick="addCellToLast('dpad')"><i class="mdi mdi-gamepad" style="font-size:1.1rem;color:#9c27b0"></i><span>D-Pad</span></div>
+        <div class="widget-item" data-type="numpad"     draggable="true" onclick="addCellToLast('numpad')"><i class="mdi mdi-numeric" style="font-size:1.1rem;color:#ff5722"></i><span>Numpad</span></div>
+        <div class="widget-item" data-type="volume"     draggable="true" onclick="addCellToLast('volume')"><i class="mdi mdi-volume-high" style="font-size:1.1rem;color:#00bcd4"></i><span>Volume</span></div>
+        <div class="widget-item" data-type="touchpad"   draggable="true" onclick="addCellToLast('touchpad')"><i class="mdi mdi-gesture-swipe" style="font-size:1.1rem;color:#ff9800"></i><span>Touchpad</span></div>
+        <div class="widget-item" data-type="slider"     draggable="true" onclick="addCellToLast('slider')"><i class="mdi mdi-tune-vertical" style="font-size:1.1rem;color:#8bc34a"></i><span>Slider</span></div>
       </div>
       <div class="panel-title" style="margin-top:4px">Commands <span style="font-size:.62rem;font-weight:400;color:#444">→ klicken = Button hinzufügen</span></div>
       <div style="font-size:.68rem;color:#444;margin-bottom:5px"><span style="color:#4caf50">grün ✓</span> = bereits auf der FB platziert</div>
@@ -226,18 +237,44 @@ function renderCmdList() {
   if (!currentDevice) return;
   const used = usedCommands();
   document.getElementById('cmd-list').innerHTML =
-    currentDevice.cmds.map(c =>
-      `<span class="cmd-chip ${used.has(c)?'used':''}" onclick="quickAdd('${c}')" title="Als Button hinzufügen">${c}</span>`
+    currentDevice.cmds.map(cmd =>
+      `<span class="cmd-chip ${used.has(cmd)?'used':''}"
+             draggable="true"
+             onclick="quickAdd('${cmd}')"
+             ondragstart="startCmdDrag(event,'${cmd}')"
+             ondragend="_dragCmd=null;_dragType=null"
+             title="Klicken oder ziehen → Button platzieren">${cmd}</span>`
     ).join('');
+}
+let _dragCmd = null;
+function startCmdDrag(e, cmd) {
+  _dragCmd = cmd; _dragType = '__cmd__'; _drag = null;
+  e.dataTransfer.effectAllowed = 'copy';
+  const gh = document.createElement('div');
+  gh.textContent = cmd;
+  gh.style.cssText = 'position:fixed;top:-200px;left:-200px;padding:5px 10px;background:#1a3a1a;color:#4caf50;border:1px solid #4caf50;border-radius:6px;font-size:.78rem;pointer-events:none';
+  document.body.appendChild(gh);
+  e.dataTransfer.setDragImage(gh, gh.offsetWidth/2||30, gh.offsetHeight/2||15);
+  requestAnimationFrame(()=>{ if(gh.parentNode) gh.parentNode.removeChild(gh); });
 }
 function quickAdd(cmd) {
   if (!currentDevice) return;
   if (!sections.length) addSection();
   const s = sections[sections.length-1];
   if (!s.rows.length) s.rows.push({cells:[]});
-  s.rows[s.rows.length-1].cells.push({type:'button', props:{
+  const gc = parseInt(document.getElementById('grid-cols').value||12);
+  let row = s.rows[s.rows.length-1];
+  migrateCols(row);
+  // Reihe voll? → neue Reihe
+  const occ = occupiedCols(row);
+  let full = true;
+  for(let i=1;i<=gc;i++) if(!occ.has(i)){full=false;break;}
+  if(full){ s.rows.push({cells:[]}); row=s.rows[s.rows.length-1]; }
+  const col = firstFreeCol(row, gc, 1);
+  row.cells.push({type:'button', props:{
+    col, cols:1,
     name:`${currentDevice.id}_${cmd.replace(/\W/g,'_').toLowerCase()}`,
-    label:cmd, icon:guessIcon(cmd), command:cmd, cols:1, haptics:true }});
+    label:cmd, icon:guessIcon(cmd), command:cmd, haptics:true, display:'both' }});
   renderCmdList(); renderCanvas();
 }
 
@@ -341,7 +378,7 @@ function buildDefaultLayout(dev) {
 }
 
 // ── Section / Row / Cell CRUD ─────────────────────────────────────────────
-function addSection() { sections.push({title:`Section ${sections.length+1}`,rows:[]}); renderCanvas(); }
+function addSection() { sections.push({title:`Section ${sections.length+1}`,rows:[{cells:[]}]}); renderCanvas(); }
 function addRow(si) {
   si=si!==undefined?si:sections.length-1;
   if(si<0){addSection();si=0;}
@@ -352,131 +389,242 @@ function addCellToLast(type) {
   const si=sections.length-1;
   if(!sections[si].rows.length) sections[si].rows.push({cells:[]});
   const ri=sections[si].rows.length-1;
-  sections[si].rows[ri].cells.push(makeCell(type));
+  const gc=parseInt(document.getElementById('grid-cols').value||12);
+  migrateCols(sections[si].rows[ri]); // sicherstellen dass col-Props gesetzt sind
+  const col=firstFreeCol(sections[si].rows[ri], gc, defaultCols(type));
+  const cell=makeCell(type, col);
+  sections[si].rows[ri].cells.push(cell);
   selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
   renderCmdList(); renderCanvas(); renderProps();
 }
-function addCellAt(type,si,ri) {
-  sections[si].rows[ri].cells.push(makeCell(type));
+function addCellAt(type,si,ri,col) {
+  const gc=parseInt(document.getElementById('grid-cols').value||12);
+  migrateCols(sections[si].rows[ri]);
+  const c2=col||firstFreeCol(sections[si].rows[ri], gc, defaultCols(type));
+  sections[si].rows[ri].cells.push(makeCell(type,c2));
   renderCmdList(); renderCanvas();
 }
-function makeCell(type) {
-  const id=currentDevice?.id||'dev';
-  if(type==='button')    return {type,props:{name:`${id}_btn`,label:'Button',icon:'',command:'',cols:1,haptics:true}};
-  if(type==='spacer')    return {type,props:{cols:1}};
-  if(type==='circlepad') return {type,props:{up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'OK',cols:3}};
-  if(type==='dpad')      return {type,props:{up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'Select',cols:3}};
-  if(type==='numpad')    return {type,props:{zero:'0',cols:3}};
-  if(type==='volume')    return {type,props:{up:'VolumeUp',mute:'Mute',down:'VolumeDown',cols:3}};
-  if(type==='touchpad')  return {type,props:{cols:4}};
-  if(type==='slider')    return {type,props:{min:0,max:100,step:1,cols:4}};
-  return {type,props:{cols:1}};
+
+// Erste freie Spalte in einer Reihe ermitteln
+function occupiedCols(row) {
+  const s=new Set();
+  (row.cells||[]).forEach(cell=>{
+    const col=cell.props?.col||1, cols=cell.props?.cols||1;
+    for(let c=col;c<col+cols;c++) s.add(c);
+  });
+  return s;
 }
+function firstFreeCol(row, gc, span) {
+  span=span||1;
+  const occ=occupiedCols(row);
+  for(let col=1;col<=gc-span+1;col++){
+    let free=true;
+    for(let c=col;c<col+span;c++) if(occ.has(c)){free=false;break;}
+    if(free) return col;
+  }
+  return 1; // Fallback
+}
+function defaultCols(type){
+  return {button:1,spacer:1,circlepad:3,dpad:3,numpad:3,volume:1,touchpad:4,slider:4}[type]||1;
+}
+
+function makeCell(type, col) {
+  const id=currentDevice?.id||'dev';
+  const c=col||1;
+  if(type==='button')    return {type,props:{col:c,cols:1,name:`${id}_btn`,label:'Button',icon:'',command:'',haptics:true,display:'both'}};
+  if(type==='spacer')    return {type,props:{col:c,cols:1}};
+  if(type==='circlepad') return {type,props:{col:c,cols:3,up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'OK'}};
+  if(type==='dpad')      return {type,props:{col:c,cols:3,up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'Select'}};
+  if(type==='numpad')    return {type,props:{col:c,cols:3,zero:'0'}};
+  if(type==='volume')    return {type,props:{col:c,cols:1,up:'VolumeUp',mute:'Mute',down:'VolumeDown'}};
+  if(type==='touchpad')  return {type,props:{col:c,cols:4}};
+  if(type==='slider')    return {type,props:{col:c,cols:4,min:0,max:100,step:1}};
+  return {type,props:{col:c,cols:1}};
+}
+// Migrate: Zellen ohne col-Eigenschaft bekommen sequentielle Spalten
+function migrateCols(row) {
+  let next=1;
+  row.cells.forEach(cell=>{
+    if(!cell.props) cell.props={};
+    if(!cell.props.col){ cell.props.col=next; }
+    next=Math.max(next, cell.props.col+(cell.props.cols||1));
+  });
+}
+
 function removeCell(si,ri,ci) { sections[si].rows[ri].cells.splice(ci,1); selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
 function removeRow(si,ri)     { sections[si].rows.splice(ri,1);           selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
 function removeSection(si)    { sections.splice(si,1);                     selectedPath=null; renderCmdList(); renderCanvas(); renderProps(); }
+function moveSection(si,d)    { const n=si+d; if(n<0||n>=sections.length)return; [sections[si],sections[n]]=[sections[n],sections[si]]; renderCanvas(); }
 function moveRow(si,ri,d)     { const r=sections[si].rows,n=ri+d; if(n<0||n>=r.length)return; [r[ri],r[n]]=[r[n],r[ri]]; renderCanvas(); }
 function selectCell(si,ri,ci) { selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; renderCanvas(); renderProps(); }
 
-// ── Drag-State ─────────────────────────────────────────────────────────────
+// ── Canvas rendern (Matrix-Grid mit freier Platzierung) ──────────────────────
 let _drag = null;
+let _dragType = null;
 
-// ── Button in Reihe verschieben (◀ ▶) ─────────────────────────────────────
-function moveCell(si,ri,ci,dir) {
-  const cells=sections[si].rows[ri].cells;
-  const ni=ci+dir;
-  if(ni<0||ni>=cells.length) return;
-  [cells[ci],cells[ni]]=[cells[ni],cells[ci]];
-  selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ni};
-  renderCanvas(); renderProps();
+
+function initPalette() {
+  document.querySelectorAll('.widget-item[data-type]').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      _dragType = item.dataset.type; _drag = null;
+      e.dataTransfer.effectAllowed = 'copy';
+      const gh=document.createElement('div');
+      gh.textContent=item.querySelector('span')?.textContent||_dragType;
+      gh.style.cssText='position:fixed;top:-200px;left:-200px;padding:5px 10px;background:#333;color:#90caf9;border:1px solid #2196f3;border-radius:6px;font-size:.78rem;pointer-events:none';
+      document.body.appendChild(gh);
+      e.dataTransfer.setDragImage(gh, gh.offsetWidth/2||30, gh.offsetHeight/2||15);
+      requestAnimationFrame(()=>{ if(gh.parentNode) gh.parentNode.removeChild(gh); });
+    });
+    item.addEventListener('dragend', () => { _dragType = null; });
+  });
 }
 
-// ── Button in andere Reihe verschieben (↑ ↓) ──────────────────────────────
-function moveCellToRow(si,ri,ci,dir) {
-  const targetRi=ri+dir;
-  if(targetRi<0||targetRi>=sections[si].rows.length) return;
-  const [cell]=sections[si].rows[ri].cells.splice(ci,1);
-  sections[si].rows[targetRi].cells.push(cell);
-  selectedPath={sectionIdx:si,rowIdx:targetRi,cellIdx:sections[si].rows[targetRi].cells.length-1};
-  renderCmdList(); renderCanvas(); renderProps();
-}
-
-// ── Canvas rendern ─────────────────────────────────────────────────────────
 function renderCanvas() {
-  const cv=document.getElementById('canvas');
-  if(!sections.length||sections.every(s=>!s.rows.length)) {
-    cv.innerHTML='<div class="canvas-empty">← Gerät wählen<br><br>Vorhandenes Layout wird automatisch geladen.<br>Sonst: Smart-Template als Start.</div>'; return;
+  const cv = document.getElementById('canvas');
+  const gc = parseInt(document.getElementById('grid-cols').value || 12);
+  if (!sections.length || sections.every(s => !s.rows.length)) {
+    cv.innerHTML='<div class="canvas-empty">← Gerät wählen<br><br>Gespeichertes Layout wird automatisch geladen.</div>'; return;
   }
-  cv.innerHTML='';
-  sections.forEach((sec,si)=>{
-    const sb=document.createElement('div'); sb.className='section-block';
-    sb.innerHTML=`<div class="section-header">
-      <input class="section-title-input" value="${esc(sec.title)}" placeholder="Section-Name…" onchange="sections[${si}].title=this.value">
+  cv.innerHTML = '';
+
+  sections.forEach((sec, si) => {
+    const sb = document.createElement('div'); sb.className='section-block';
+    const hdr = document.createElement('div'); hdr.className='section-header';
+    hdr.innerHTML=`<button class="btn-icon" onclick="moveSection(${si},-1)" title="Section ↑">▲</button>
+      <button class="btn-icon" onclick="moveSection(${si},1)"  title="Section ↓">▼</button>
+      <input class="section-title-input" value="${esc(sec.title)}" placeholder="Section-Name…"
+             onchange="sections[${si}].title=this.value" title="Klicken zum Umbenennen">
       <button class="btn-icon" onclick="addRow(${si})">＋ Reihe</button>
-      <button class="btn-icon" onclick="removeSection(${si})">🗑</button></div>`;
-    sec.rows.forEach((row,ri)=>{
-      const rb=document.createElement('div'); rb.className='row-block';
-      const num=document.createElement('span'); num.className='row-num'; num.textContent=ri+1; rb.appendChild(num);
-      const cells=document.createElement('div'); cells.className='cells';
-      // Reihe als Drop-Ziel (Cell aus anderer Reihe ablegen)
-      rb.addEventListener('dragover', e => {
-        if (!_drag) return;
-        e.preventDefault(); e.dataTransfer.dropEffect='move';
-        rb.classList.add('drop-target');
-      });
-      rb.addEventListener('dragleave', () => rb.classList.remove('drop-target'));
-      rb.addEventListener('drop', e => {
-        e.preventDefault(); rb.classList.remove('drop-target');
-        if (!_drag || (_drag.si===si && _drag.ri===ri)) return;
-        const cell = sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci, 1)[0];
-        sections[si].rows[ri].cells.push(cell);
-        selectedPath = {sectionIdx:si, rowIdx:ri, cellIdx:sections[si].rows[ri].cells.length-1};
-        _drag=null; renderCmdList(); renderCanvas(); renderProps();
+      <button class="btn-icon" onclick="removeSection(${si})" title="Section löschen">🗑</button>`;
+    sb.appendChild(hdr);
+
+    sec.rows.forEach((row, ri) => {
+      migrateCols(row);
+
+      // Belegungskarte: col → {cell, ci, cols}
+      const slotMap = {};
+      row.cells.forEach((cell, ci) => {
+        const col  = Math.max(1, cell.props?.col  || 1);
+        const cols = Math.max(1, cell.props?.cols || 1);
+        slotMap[col] = {cell, ci, cols};
       });
 
-      row.cells.forEach((cell,ci)=>{
-        const isSel=selectedPath&&selectedPath.sectionIdx===si&&selectedPath.rowIdx===ri&&selectedPath.cellIdx===ci;
-        const el=document.createElement('div');
-        el.className=`cell widget-${cell.type} ${cell.type==='spacer'?'spacer':''} ${isSel?'selected':''}`;
-        const cols=cell.props?.cols||1, gridCols=parseInt(document.getElementById('grid-cols').value||12);
-        el.style.flexBasis=`calc(${(cols/gridCols)*100}% - 6px)`;
-        // ◀ ▶ Pfeil-Buttons + × Delete
-        el.innerHTML=cellHtml(cell)
-          +`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`
-          +`<span class="cell-move">
-              <button onclick="event.stopPropagation();moveCell(${si},${ri},${ci},-1)" title="◀ links">◀</button>
-              <button onclick="event.stopPropagation();moveCellToRow(${si},${ri},${ci},-1)" title="Reihe ↑">↑</button>
-              <button onclick="event.stopPropagation();moveCellToRow(${si},${ri},${ci},1)"  title="Reihe ↓">↓</button>
-              <button onclick="event.stopPropagation();moveCell(${si},${ri},${ci},1)"  title="▶ rechts">▶</button>
-            </span>`;
-        el.onclick=()=>selectCell(si,ri,ci);
-        // Drag & Drop
-        el.draggable=true;
-        el.addEventListener('dragstart', e => {
-          _drag={si,ri,ci}; el.classList.add('dragging');
-          e.dataTransfer.effectAllowed='move';
-        });
-        el.addEventListener('dragend', () => { _drag=null; el.classList.remove('dragging'); renderCanvas(); });
-        el.addEventListener('dragover', e => { if(!_drag||(_drag.si===si&&_drag.ri===ri&&_drag.ci===ci))return; e.preventDefault(); el.classList.add('drag-over'); });
-        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
-        el.addEventListener('drop', e => {
-          e.preventDefault(); e.stopPropagation(); el.classList.remove('drag-over');
-          if (!_drag||(_drag.si===si&&_drag.ri===ri&&_drag.ci===ci)) return;
-          const src=sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci,1)[0];
-          // Ziel-Index neu berechnen nach splice
-          let tci=ci; if(_drag.si===si&&_drag.ri===ri&&_drag.ci<ci) tci--;
-          sections[si].rows[ri].cells.splice(tci,0,src);
-          selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:tci};
-          _drag=null; renderCmdList(); renderCanvas(); renderProps();
-        });
-        cells.appendChild(el);
-      });
-      const add=document.createElement('button'); add.className='row-add-btn'; add.textContent='＋';
-      add.onclick=()=>addCellAt('button',si,ri); cells.appendChild(add);
-      rb.appendChild(cells);
-      const acts=document.createElement('div'); acts.className='row-actions';
-      acts.innerHTML=`<button onclick="moveRow(${si},${ri},-1)">▲</button><button onclick="moveRow(${si},${ri},1)">▼</button><button onclick="removeRow(${si},${ri})">🗑</button>`;
-      rb.appendChild(acts); sb.appendChild(rb);
+      const wrap = document.createElement('div'); wrap.className='matrix-row-wrap';
+      const rowHdr = document.createElement('div'); rowHdr.className='matrix-row-hdr';
+      rowHdr.innerHTML=`<span class="row-num">${ri+1}</span>
+        <button class="btn-icon" onclick="moveRow(${si},${ri},-1)">▲</button>
+        <button class="btn-icon" onclick="moveRow(${si},${ri},1)">▼</button>
+        <button class="btn-icon" onclick="removeRow(${si},${ri})">🗑</button>`;
+      wrap.appendChild(rowHdr);
+
+      const grid = document.createElement('div'); grid.className='matrix-grid';
+      grid.style.cssText=`display:grid;grid-template-columns:repeat(${gc},1fr);grid-auto-rows:minmax(44px,auto);gap:3px;width:100%`;
+
+      // Spalten 1→gc in Reihenfolge — jedes Element auf grid-row:1 fixieren
+      let skipTo = 0;
+      for (let col = 1; col <= gc; col++) {
+        if (col <= skipTo) continue;
+
+        const entry = slotMap[col];
+        if (entry) {
+          // ── Widget ─────────────────────────────────────────────────────
+          const {cell, ci, cols} = entry;
+          const isSel = selectedPath?.sectionIdx===si && selectedPath?.rowIdx===ri && selectedPath?.cellIdx===ci;
+          const el = document.createElement('div');
+          el.className=`matrix-cell widget-${cell.type}${isSel?' selected':''}`;
+          el.style.gridColumn=`${col} / span ${cols}`;
+          el.style.gridRow='1';
+          if(cell.type==='button'){
+            if(cell.props?.color)      el.style.color=cell.props.color;
+            if(cell.props?.background) el.style.background=cell.props.background;
+          }
+          el.innerHTML=cellHtml(cell)+`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
+          el.onclick=()=>selectCell(si,ri,ci);
+
+          el.draggable=true;
+          el.addEventListener('dragstart', e=>{
+            _drag={si,ri,ci}; _dragType=null;
+            el.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
+            const gh=document.createElement('div');
+            gh.textContent=cell.props?.label||cell.props?.command||cell.type;
+            gh.style.cssText='position:fixed;top:-200px;left:-200px;padding:5px 10px;background:#2196f3;color:#fff;border-radius:6px;font-size:.78rem;white-space:nowrap;pointer-events:none';
+            document.body.appendChild(gh);
+            e.dataTransfer.setDragImage(gh, gh.offsetWidth/2||30, gh.offsetHeight/2||15);
+            requestAnimationFrame(()=>{ if(gh.parentNode) gh.parentNode.removeChild(gh); });
+          });
+          el.addEventListener('dragend', ()=>{ _drag=null; el.classList.remove('dragging'); renderCanvas(); });
+          el.addEventListener('dragover',  e=>{ e.preventDefault(); el.classList.add('drag-over'); });
+          el.addEventListener('dragleave', ()=>el.classList.remove('drag-over'));
+          el.addEventListener('drop', e=>{
+            e.preventDefault(); e.stopPropagation(); el.classList.remove('drag-over');
+            if(_dragType==='__cmd__' && _dragCmd){
+              const nc=makeCell('button',col);
+              nc.props.command=_dragCmd; nc.props.label=_dragCmd; nc.props.icon=guessIcon(_dragCmd);
+              sections[si].rows[ri].cells.push(nc);
+              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+              _dragCmd=null; _dragType=null;
+            } else if(_dragType && _dragType!=='__cmd__'){
+              // Palette → vor dieses Widget einfügen
+              const nc=makeCell(_dragType, col); _dragType=null;
+              sections[si].rows[ri].cells.push(nc);
+              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+            } else if(_drag){
+              // Widget ↔ Widget: col-Positionen tauschen
+              const src=sections[_drag.si].rows[_drag.ri].cells[_drag.ci];
+              const tgt=sections[si].rows[ri].cells[ci];
+              const tmp=tgt.props.col; tgt.props.col=src.props.col; src.props.col=tmp;
+              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; _drag=null;
+            }
+            renderCmdList(); renderCanvas(); renderProps();
+          });
+          grid.appendChild(el);
+          skipTo = col + cols - 1;
+
+        } else {
+          // ── Leeres Feld ────────────────────────────────────────────────
+          const slot = document.createElement('div'); slot.className='matrix-empty';
+          slot.style.gridColumn=String(col);
+          slot.style.gridRow='1';
+          slot.innerHTML='<span>+</span>';
+          const _col=col;
+          slot.onclick=()=>{
+            migrateCols(sections[si].rows[ri]);
+            sections[si].rows[ri].cells.push(makeCell('spacer',_col));
+            selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+            renderCmdList(); renderCanvas(); renderProps();
+          };
+          slot.addEventListener('dragover',  e=>{ e.preventDefault(); slot.classList.add('drag-over'); });
+          slot.addEventListener('dragleave', ()=>slot.classList.remove('drag-over'));
+          slot.addEventListener('drop', e=>{
+            e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over');
+            if(_dragType==='__cmd__' && _dragCmd){
+              const cell=makeCell('button',_col);
+              cell.props.command=_dragCmd; cell.props.label=_dragCmd; cell.props.icon=guessIcon(_dragCmd);
+              sections[si].rows[ri].cells.push(cell);
+              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+              _dragCmd=null; _dragType=null;
+            } else if(_dragType && _dragType!=='__cmd__'){
+              sections[si].rows[ri].cells.push(makeCell(_dragType,_col));
+              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+              _dragType=null;
+            } else if(_drag){
+              const src=sections[_drag.si].rows[_drag.ri].cells[_drag.ci];
+              if(_drag.si===si&&_drag.ri===ri){
+                src.props.col=_col; // gleiche Reihe: nur col ändern
+              } else {
+                const [moved]=sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci,1);
+                moved.props.col=_col;
+                sections[si].rows[ri].cells.push(moved);
+                selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+              }
+              _drag=null;
+            }
+            renderCmdList(); renderCanvas(); renderProps();
+          });
+          grid.appendChild(slot);
+        }
+      }
+      wrap.appendChild(grid); sb.appendChild(wrap);
     });
     cv.appendChild(sb);
   });
@@ -514,9 +662,12 @@ function renderProps() {
   let html=`
     <div class="prop-group"><label class="prop-label">Typ</label>
       <select class="prop-input" onchange="changeType(this.value)">${typeOpts}</select></div>
-    <div class="prop-group"><label class="prop-label">Breite (${cell.props?.cols||1} / ${gc} Spalten)</label>
+    <div class="prop-group"><label class="prop-label">Spaltenposition (${cell.props?.col||1} von ${gc})</label>
+      <input class="prop-input" type="range" min="1" max="${gc}" value="${cell.props?.col||1}"
+             oninput="setProp('col',+this.value);this.previousElementSibling.textContent='Spaltenposition ('+this.value+' von ${gc})';renderCanvas()"></div>
+    <div class="prop-group"><label class="prop-label">Breite (${cell.props?.cols||1} Spalten)</label>
       <input class="prop-input" type="range" min="1" max="${gc}" value="${cell.props?.cols||1}"
-             oninput="setProp('cols',+this.value);this.previousElementSibling.textContent='Breite ('+this.value+' / ${gc} Spalten)';renderCanvas()"></div>`;
+             oninput="setProp('cols',+this.value);this.previousElementSibling.textContent='Breite ('+this.value+' Spalten)';renderCanvas()"></div>`;
 
   if(cell.type==='button') {
     const cmdOpts='<option value="">— kein —</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.command===c?'selected':''}>${c}</option>`).join('');
@@ -548,7 +699,30 @@ function renderProps() {
           <option value="text"   ${cell.props?.display==='text'   ?'selected':''}>Nur Text</option>
         </select></div>
       <div class="prop-group"><label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#aaa;cursor:pointer">
-        <input type="checkbox" ${cell.props?.haptics?'checked':''} onchange="setProp('haptics',this.checked)">Haptics</label></div>`;
+        <input type="checkbox" ${cell.props?.haptics?'checked':''} onchange="setProp('haptics',this.checked)">Haptics</label></div>
+      <div class="prop-sep">Farben</div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label class="prop-label">Symbol-/Textfarbe</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" value="${cell.props?.color||'#e1e1e1'}"
+              style="width:36px;height:28px;border:1px solid #2d3142;border-radius:4px;background:#111318;cursor:pointer;padding:2px"
+              oninput="setProp('color',this.value);renderCanvas()">
+            <button type="button" onclick="setProp('color','');document.querySelector('#props-content input[type=color]').value='#e1e1e1';renderCanvas()"
+              style="font-size:.7rem;background:none;border:1px solid #2d3142;color:#888;border-radius:4px;padding:2px 6px;cursor:pointer">Reset</button>
+          </div>
+        </div>
+        <div style="flex:1">
+          <label class="prop-label">Hintergrundfarbe</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" value="${cell.props?.background||'#252830'}"
+              style="width:36px;height:28px;border:1px solid #2d3142;border-radius:4px;background:#111318;cursor:pointer;padding:2px"
+              oninput="setProp('background',this.value);renderCanvas()">
+            <button type="button" onclick="setProp('background','');document.querySelectorAll('#props-content input[type=color]')[1].value='#252830';renderCanvas()"
+              style="font-size:.7rem;background:none;border:1px solid #2d3142;color:#888;border-radius:4px;padding:2px 6px;cursor:pointer">Reset</button>
+          </div>
+        </div>
+      </div>`;
   }
   const dirPairs=[['up','▲ Hoch'],['down','▼ Runter'],['left','◀ Links'],['right','▶ Rechts'],['ok','⭕ OK/Select']];
   if(['circlepad','dpad'].includes(cell.type)) {
@@ -576,7 +750,34 @@ function renderProps() {
 function setProp(k,v){
   if(!selectedPath)return;
   const {sectionIdx:si,rowIdx:ri,cellIdx:ci}=selectedPath;
-  if(sections[si]?.rows[ri]?.cells[ci]?.props!=null) sections[si].rows[ri].cells[ci].props[k]=v;
+  if(sections[si]?.rows[ri]?.cells[ci]?.props!=null){
+    sections[si].rows[ri].cells[ci].props[k]=v;
+    // Bei Breiten- oder Positionsänderung: Überlappungen auflösen
+    if(k==='cols'||k==='col') resolveOverlaps(si,ri);
+  }
+}
+
+// Überlappungen in einer Reihe auflösen: Zellen nach rechts schieben
+function resolveOverlaps(si, ri) {
+  const row = sections[si].rows[ri];
+  const gc  = parseInt(document.getElementById('grid-cols').value||12);
+  // Nach Spaltenposition sortieren
+  row.cells.sort((a,b)=>(a.props?.col||1)-(b.props?.col||1));
+  // Jeden Button der überlappt nach rechts schieben
+  let nextFree = 1;
+  row.cells.forEach(cell => {
+    const col  = Math.max(nextFree, cell.props?.col||1);
+    cell.props.col  = col;
+    nextFree = col + (cell.props?.cols||1);
+  });
+  // Buttons die über das Raster hinausragen: in nächste Reihe oder Breite kürzen
+  row.cells = row.cells.filter(cell => {
+    const col  = cell.props?.col||1;
+    const cols = cell.props?.cols||1;
+    if(col > gc) return false;            // komplett außerhalb → entfernen wäre zu aggressiv → einfach auf gc klemmen
+    if(col + cols - 1 > gc) cell.props.cols = gc - col + 1; // Breite kappen
+    return true;
+  });
 }
 function changeType(t){
   if(!selectedPath)return;
@@ -720,8 +921,8 @@ function setView(mode) {
   _viewMode = mode;
   document.getElementById('btn-edit').classList.toggle('active', mode==='edit');
   document.getElementById('btn-prev').classList.toggle('active', mode==='preview');
-  document.getElementById('btn-add-sec').style.display = mode==='edit' ? '' : 'none';
-  document.getElementById('btn-add-row').style.display = mode==='edit' ? '' : 'none';
+  document.getElementById('btn-add-sec').style.visibility = mode==='edit' ? '' : 'hidden';
+  document.getElementById('btn-add-row').style.visibility = mode==='edit' ? '' : 'hidden';
   if (mode==='preview') renderPreview(); else renderCanvas();
 }
 
@@ -743,8 +944,8 @@ function renderPreview() {
     sec.rows.forEach(row => {
       const rd = document.createElement('div'); rd.className='preview-row';
       row.cells.forEach(cell => {
-        const colsFrac = (cell.props?.cols||1) / gc;
-        const el = previewCell(cell, colsFrac);
+        const cols = cell.props?.cols||1;
+        const el = previewCell(cell, cols, gc);
         rd.appendChild(el);
       });
       sd.appendChild(rd);
@@ -754,13 +955,13 @@ function renderPreview() {
   cv.innerHTML=''; cv.appendChild(card);
 }
 
-function previewCell(cell, colsFrac) {
+function previewCell(cell, cols, gc) {
   const t = cell.type;
-  const w = Math.round(colsFrac * 100);
+  const span = Math.max(1, Math.round(cols));
 
   if (t === 'spacer') {
     const el = document.createElement('div'); el.className='preview-spacer';
-    el.style.flexBasis = `calc(${w}% - 6px)`; return el;
+    el.style.flex=span; return el;
   }
   if (t === 'circlepad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -771,7 +972,7 @@ function previewCell(cell, colsFrac) {
       <button class="pdirBtn pleft"><i class="mdi mdi-chevron-left"></i></button>
       <button class="pdirBtn pright"><i class="mdi mdi-chevron-right"></i></button>
       <div class="pcenter"><i class="mdi mdi-circle" style="color:#fff;font-size:.8rem"></i></div>
-    </div>`; return wrap;
+    </div>`; wrap.style.flex=span; return wrap;
   }
   if (t === 'dpad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -781,13 +982,13 @@ function previewCell(cell, colsFrac) {
       <div class="dc"><i class="mdi mdi-circle" style="font-size:.7rem"></i></div>
       <div class="dc"><i class="mdi mdi-chevron-right"></i></div>
       <div class="dc empty"></div><div class="dc"><i class="mdi mdi-chevron-down"></i></div><div class="dc empty"></div>
-    </div>`; return wrap;
+    </div>`; wrap.style.flex=span; return wrap;
   }
   if (t === 'numpad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
     const nums = [1,2,3,4,5,6,7,8,9,'','0',''];
     wrap.innerHTML=`<div class="preview-numpad">${nums.map(n=>n===''?'<div class="pn" style="background:transparent"></div>':`<div class="pn">${n}</div>`).join('')}</div>`;
-    return wrap;
+    wrap.style.flex=span; return wrap;
   }
   if (t === 'volume') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -795,7 +996,7 @@ function previewCell(cell, colsFrac) {
       <div class="pv"><i class="mdi mdi-volume-plus"></i></div>
       <div class="pv"><i class="mdi mdi-volume-mute"></i></div>
       <div class="pv"><i class="mdi mdi-volume-minus"></i></div>
-    </div>`; return wrap;
+    </div>`; wrap.style.flex=span; return wrap;
   }
   // button
   const ic   = cell.props?.icon || '';
@@ -804,7 +1005,9 @@ function previewCell(cell, colsFrac) {
   const showIc  = ic  && disp !== 'text';
   const showLbl = lbl && disp !== 'icon';
   const el  = document.createElement('button'); el.className='preview-btn';
-  el.style.flexBasis = `calc(${w}% - 6px)`;
+  el.style.flex=span;
+  if(cell.props?.color)      el.style.color      = cell.props.color;
+  if(cell.props?.background) el.style.background = cell.props.background;
   el.innerHTML = (showIc ? `<i class="mdi ${ic.replace('mdi:','mdi-')}"></i>` : '')
                + (showLbl ? `<span>${esc(lbl)}</span>` : '');
   if (!showIc && !showLbl) el.innerHTML = '<span style="color:#444">?</span>';
@@ -829,6 +1032,8 @@ async function saveAndDeploy(){
   st.innerHTML=d2.ok?`<span class="status ok">✅ Deployed: ${d2.views_deployed?.join(', ')||'ok'}</span>`
                     :`<span class="status err">❌ ${d2.error}</span>`;
 }
+
+document.addEventListener('DOMContentLoaded', initPalette);
 </script>
 </body>
 </html>
