@@ -69,6 +69,17 @@ ICON_COLORS = {
     "Green":"color:green","Red":"color:red",
     "Yellow":"color:#f59e0b","Blue":"color:dodgerblue",
 }
+# Buttons deren Icon eindeutig ist → kein Label nötig
+ICON_ONLY = {
+    "PowerOn","PowerOff","PowerToggle",
+    "VolumeUp","VolumeDown","Mute",
+    "ChannelUp","ChannelDown","ChannelPrev",
+    "Play","Pause","Stop","Record",
+    "Rewind","FastForward","SkipBack","SkipForward",
+    "Green","Red","Yellow","Blue",
+    "Back","Exit","Home",
+    "Ambilight",
+}
 SCENARIO_LABELS = {
     "sky":"Sky","firetv":"Fire TV","android":"Android TV","bluetooth":"Bluetooth",
     "radio":"Radio","ps":"PlayStation","netflix":"Netflix","kodi":"Kodi",
@@ -111,7 +122,11 @@ def btn(name, cmd_id, hub_entity, dev_id, label=None, repeat=False):
     b = {"type":"button","name":name,"tap_action":send(hub_entity,dev_id,cmd_id),"haptics":True}
     i = ic(cmd_id)
     if i: b["icon"] = i
-    b["label"] = label if label is not None else LABELS.get(cmd_id, cmd_id)
+    # Eindeutiges Symbol → kein Label; explizit übergebenes label hat Vorrang
+    if label is not None:
+        b["label"] = label
+    elif cmd_id not in ICON_ONLY:
+        b["label"] = LABELS.get(cmd_id, cmd_id)
     if repeat: b["hold_action"] = {"action":"repeat"}
     col = ICON_COLORS.get(cmd_id)
     if col: b["icon_style"] = col
@@ -328,9 +343,13 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
         short=SCENARIO_LABELS.get(slug) or (raw.split(None,1)[-1].title() if " " in raw else raw.title())
         label=ov.get(s["id"],{}).get("label") or short
         icon=ov.get(s["id"],{}).get("icon") or SCENARIO_ICONS.get(slug,"mdi:play-circle")
+        # Aktive Aktivität hervorheben: background_color + icon_color als Template
+        bg  = f"{{{{ 'rgba(255,255,255,0.18)' if is_state_attr('{hub_entity}', 'current_activity', '{activity}') else 'transparent' }}}}"
+        icol= f"{{{{ 'var(--accent)' if is_state_attr('{hub_entity}', 'current_activity', '{activity}') else 'var(--primary-text-color)' }}}}"
         acts.append({"type":"button","name":name,"haptics":True,"icon":icon,"label":label,
                      "tap_action":{"action":"perform-action","perform_action":"remote.turn_on",
-                                   "target":{"entity_id":hub_entity},"data":{"activity":activity}}})
+                                   "target":{"entity_id":hub_entity},"data":{"activity":activity}},
+                     "background_color": bg, "icon_color": icol})
     acts.append({"type":"button","name":"power_off","icon":"mdi:power","label":"Aus",
                  "haptics":True,"icon_style":"color:red",
                  "tap_action":{"action":"perform-action","perform_action":"remote.turn_off",
