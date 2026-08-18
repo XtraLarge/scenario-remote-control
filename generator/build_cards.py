@@ -127,7 +127,7 @@ def clean_rows(rows):
             if any(item is not None if not isinstance(item, list) else True for item in row):
                 out.append(row)
         else:
-            out.append(row)  # None-Spacer zwischen Gruppen
+            out.append([None])  # Spacer-Zeile: [None] statt bare null (URC-kompatibel)
     while out and out[-1] is None:
         out.pop()
     return out
@@ -334,8 +334,8 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
                  "haptics":True,"icon_style":"color:red",
                  "tap_action":{"action":"perform-action","perform_action":"remote.turn_off",
                                "target":{"entity_id":hub_entity}}})
-    refs.append("power_off")
     # Aktivitäts-Buttons in Zeilen à max 4 aufteilen (verhindert Overflow)
+    # power_off steht bereits in all_rows[0] – NICHT nochmal in refs anhängen
     COLS = 4
     act_rows = [refs[i:i+COLS] for i in range(0, len(refs), COLS)]
     all_rows = [["power_off"]] + act_rows
