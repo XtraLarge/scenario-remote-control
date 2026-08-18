@@ -57,8 +57,6 @@
     .acc-body { display:none; padding:0 12px 10px; border-top:1px solid #1a1d24; }
     .acc-body.open { display:block; }
     .act-meta { margin:8px 0 10px; display:flex; flex-direction:column; gap:5px; }
-    .act-fb-label { font-size:.7rem; color:#555; font-weight:600;
-      text-transform:uppercase; letter-spacing:.06em; margin:6px 0 4px; }
     .act-meta-row { display:flex; align-items:center; gap:6px; }
     .act-meta-row label { font-size:.7rem; color:#777; width:90px; flex-shrink:0; }
     .act-meta-row input { flex:1; background:#111318; border:1px solid #2d3142; border-radius:4px;
@@ -497,6 +495,7 @@ function renderRoster() {
     const card = document.createElement('div');
     card.className = 'activity-card';
     card.innerHTML =
+      // ── Akkordeon: Name + Icon (optional, eingeklappt) ───────────────
       `<div class="acc-header" onclick="toggleAcc(this)">
         <span class="acc-arrow">&#9654;</span>
         <i class="mdi ${curIcon.replace('mdi:','mdi-')} acc-icon" id="act-hdr-icon-${safeId}"></i>
@@ -524,14 +523,14 @@ function renderRoster() {
                    id="act-icon-v-${safeId}" value="${saved.icon||''}">
           </div>
         </div>
-        <div class="act-fb-label">Fernbedienungen einblenden</div>
-        ${_devices.map(d =>
-          `<label class="device-row">
-            <input type="checkbox" class="roster-cb"
-                   data-act="${actId}" data-dev="${d.name}" checked>
-            <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
-          </label>`).join('')}
-      </div>`;
+      </div>` +
+      // ── FBs: immer sichtbar ──────────────────────────────────────────
+      _devices.map(d =>
+        `<label class="device-row">
+          <input type="checkbox" class="roster-cb"
+                 data-act="${actId}" data-dev="${d.name}" checked>
+          <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
+        </label>`).join('');
     grid.appendChild(card);
   }
 }
