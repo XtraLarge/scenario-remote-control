@@ -63,7 +63,7 @@ ICONS = {
     "Yellow":"mdi:alpha-y-circle","Blue":"mdi:alpha-b-circle",
     "InputHdmi1":"mdi:hdmi-port","InputHdmi2":"mdi:hdmi-port",
     "InputHdmi3":"mdi:hdmi-port","InputHdmi4":"mdi:hdmi-port",
-    # Zahlen: kein Icon → text-only (verhindert Duplikat Icon+Label)
+    **{str(n): f"mdi:numeric-{n}-circle-outline" for n in range(10)},
 }
 ICON_COLORS = {
     "Green":"color:green","Red":"color:red",
@@ -80,6 +80,7 @@ ICON_ONLY = {
     "Back","Exit","Home",
     "Ambilight","SmartMenu",
     "Guide","Info","Subtitle","Teletext","List","Options","Apps",
+    "0","1","2","3","4","5","6","7","8","9",
 }
 SCENARIO_LABELS = {
     "sky":"Sky","firetv":"Fire TV","android":"Android TV","bluetooth":"Bluetooth",
@@ -156,27 +157,28 @@ def vol_row(pid, cids, hub_entity, dev_id):
             acts.append(btn(n, cid, hub_entity, dev_id))
     return row, acts
 
-_NUM_WORDS = {1:"one",2:"two",3:"three",4:"four",5:"five",
-              6:"six",7:"seven",8:"eight",9:"nine",0:"zero"}
-
-def numpad_action(pid, cids, hub_entity, dev_id):
-    """URC type:numpad — ein Action-Objekt für 1-9 + separater 0-Button.
-    Rendert identisch zum Original (mdi:numeric-X-circle-outline Icons, kein Text-Duplikat)."""
-    np = {"type":"numpad","name":f"{pid}_numpad",
-          "icon":"mdi:dialpad","tap_action":{"action":"key","key":"numpad"}}
-    acts = [np]
-    for n in list(range(1,10)) + [0]:
+def numpad_rows(pid, cids, hub_entity, dev_id):
+    """Zahlen 1-9 als 3×3 Zeilen + optional 0. Jeder Button = icon-only (ICON_ONLY+ICONS).
+    Gibt (digit_rows, zero_ref_list, acts) zurück.
+    digit_rows: [[r1c1,...], [r4c1,...], [r7c1,...]] je nach verfügbaren Ziffern.
+    zero_ref_list: [f"{pid}_num_0"] wenn 0 vorhanden, sonst [].
+    """
+    acts, digit_refs = [], []
+    for n in range(1, 10):
         if str(n) in cids:
-            np[_NUM_WORDS[n]] = {
-                "icon": f"mdi:numeric-{n}-circle-outline",
-                "tap_action": send(hub_entity, dev_id, str(n))
-            }
-    # Separater 0-Button für Platzierung außerhalb des 3×3-Grids
+            name = f"{pid}_num{n}"
+            acts.append(btn(name, str(n), hub_entity, dev_id))
+            digit_refs.append(name)
+    zero_ref = []
     if "0" in cids:
-        acts.append({"type":"button","name":f"{pid}_num_0",
-                     "icon":"mdi:numeric-0-circle-outline","haptics":True,
-                     "tap_action":send(hub_entity,dev_id,"0")})
-    return acts  # [numpad_action, optional 0_button_action]
+        name = f"{pid}_num0"
+        acts.append(btn(name, "0", hub_entity, dev_id))
+        zero_ref = [name]
+    # 3×3 Zeilen aus digit_refs
+    rows = []
+    for i in range(0, len(digit_refs), 3):
+        rows.append(digit_refs[i:i+3])
+    return rows, zero_ref, acts
 
 def circlepad_action(pid, cids, hub_entity, dev_id, ok_cmd=None):
     """circlepad als URC-Action (type:circlepad)."""
@@ -215,12 +217,16 @@ def tmpl_smart_tv(pid, cids, hub_entity, dev_id, accent=None):
     has_num = any(str(n) in cids for n in range(10))
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
     if has_num:
-        acts += numpad_action(pid, cids, hub_entity, dev_id)
-        np_col = [f"{pid}_numpad"] + ([f"{pid}_num_0"] if "0" in cids else [])
-        if vrow:
-            rows.append([np_col, vrow])
-        else:
-            rows.append(np_col)
+        np_rows, zero_ref, np_acts = numpad_rows(pid, cids, hub_entity, dev_id)
+        acts += np_acts
+        # Numpad-Zeilen + Volumen-Spalte nebeneinander (jede Zeile: [n1,n2,n3, vol])
+        vol_btns = vrow if vrow else []
+        num_rows_padded = np_rows + [[] for _ in range(max(0, len(vol_btns) - len(np_rows)))]
+        for i, nr in enumerate(num_rows_padded):
+            v = vol_btns[i] if i < len(vol_btns) else None
+            rows.append(nr + ([v] if v else []))
+        if zero_ref:
+            rows.append(zero_ref)
         rows.append(None)
     elif vrow:
         rows.append(vrow); rows.append(None)
@@ -268,12 +274,15 @@ def tmpl_satellite(pid, cids, hub_entity, dev_id, accent=None):
     has_num = any(str(n) in cids for n in range(10))
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
     if has_num:
-        acts += numpad_action(pid, cids, hub_entity, dev_id)
-        np_col = [f"{pid}_numpad"] + ([f"{pid}_num_0"] if "0" in cids else [])
-        if vrow:
-            rows.append([np_col, vrow])
-        else:
-            rows.append(np_col)
+        np_rows, zero_ref, np_acts = numpad_rows(pid, cids, hub_entity, dev_id)
+        acts += np_acts
+        vol_btns = vrow if vrow else []
+        num_rows_padded = np_rows + [[] for _ in range(max(0, len(vol_btns) - len(np_rows)))]
+        for i, nr in enumerate(num_rows_padded):
+            v = vol_btns[i] if i < len(vol_btns) else None
+            rows.append(nr + ([v] if v else []))
+        if zero_ref:
+            rows.append(zero_ref)
     elif vrow:
         rows.append(vrow)
     rows.append(None)
@@ -359,13 +368,16 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
         short=SCENARIO_LABELS.get(slug) or (raw.split(None,1)[-1].title() if " " in raw else raw.title())
         label=ov.get(s["id"],{}).get("label") or short
         icon=ov.get(s["id"],{}).get("icon") or SCENARIO_ICONS.get(slug,"mdi:play-circle")
-        # Aktive Aktivität hervorheben: background_color + icon_color als Template
-        bg  = f"{{{{ 'rgba(255,255,255,0.18)' if is_state_attr('{hub_entity}', 'current_activity', '{activity}') else 'transparent' }}}}"
-        icol= f"{{{{ 'var(--accent)' if is_state_attr('{hub_entity}', 'current_activity', '{activity}') else 'var(--primary-text-color)' }}}}"
+        # Aktive Aktivität hervorheben: styles als CSS-Template-String (URC renderTemplate)
+        act_tpl = f"is_state_attr('{hub_entity}', 'current_activity', '{activity}')"
+        hl_styles = (
+            f"background: {{{{ 'rgba(255,255,255,0.18)' if {act_tpl} else 'none' }}}};"
+            f" --icon-color: {{{{ 'var(--accent-color)' if {act_tpl} else 'var(--primary-text-color)' }}}};"
+        )
         acts.append({"type":"button","name":name,"haptics":True,"icon":icon,"label":label,
                      "tap_action":{"action":"perform-action","perform_action":"remote.turn_on",
                                    "target":{"entity_id":hub_entity},"data":{"activity":activity}},
-                     "background_color": bg, "icon_color": icol})
+                     "styles": hl_styles})
     acts.append({"type":"button","name":"power_off","icon":"mdi:power","label":"Aus",
                  "haptics":True,"icon_style":"color:red",
                  "tap_action":{"action":"perform-action","perform_action":"remote.turn_off",
