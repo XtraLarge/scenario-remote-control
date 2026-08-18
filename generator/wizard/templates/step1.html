@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Remote Config Wizard</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+  <style id="icon-picker-css">
+    #icon-picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center}
+    #icon-picker-overlay.open{display:flex}
+    #icon-picker-box{background:#1e2128;border:1px solid #3d4156;border-radius:10px;width:540px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+    #icon-picker-header{padding:10px 14px;border-bottom:1px solid #2d3142;display:flex;align-items:center;gap:8px}
+    #icon-picker-search{flex:1;background:#111318;border:1px solid #3d4156;border-radius:6px;color:#e1e1e1;padding:6px 10px;font-size:.85rem;outline:none}
+    #icon-picker-search:focus{border-color:#42a5f5}
+    #icon-picker-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;overflow-y:auto;padding:10px;flex:1;min-height:0}
+    .icon-pick-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s,border-color .1s}
+    .icon-pick-item:hover{background:#252c3a;border-color:#42a5f5}
+    .icon-pick-item.sel{background:#1a2a40;border-color:#90caf9}
+    .icon-pick-item i{font-size:1.4rem;color:#90caf9}
+    .icon-pick-item span{font-size:.55rem;color:#666;text-align:center;word-break:break-all;line-height:1.2;max-width:52px}
+    #icon-picker-footer{padding:8px 14px;border-top:1px solid #2d3142;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .act-icon-btn{display:flex;align-items:center;gap:6px;background:#1e2128;border:1px solid #2d3142;border-radius:5px;padding:4px 8px;cursor:pointer;color:#e1e1e1;font-size:.75rem;flex:1;min-width:0}
+    .act-icon-btn:hover{border-color:#42a5f5}
+    .act-icon-btn i{font-size:1.1rem;color:#9c27b0;flex-shrink:0}
+    .act-icon-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#aaa;font-family:monospace;font-size:.72rem}
+  </style>
   <style>
     .tooltip { position:relative; display:inline-flex; align-items:center; }
     .tooltip .tip {
@@ -24,6 +44,14 @@
     .step-badge { display:inline-block; background:#2196f3; color:#fff; font-size:.7rem;
       font-weight:600; padding:2px 7px; border-radius:10px; margin-right:6px; vertical-align:middle; }
     .room-id-hint { font-size:.72rem; color:#666; margin-top:3px; }
+    .activity-card { display:flex; flex-direction:column; gap:0; }
+    .act-meta { margin-top:8px; padding-top:8px; border-top:1px solid #2d3142; display:flex; flex-direction:column; gap:5px; }
+    .act-meta-row { display:flex; align-items:center; gap:6px; }
+    .act-meta-row label { font-size:.7rem; color:#777; width:90px; flex-shrink:0; }
+    .act-meta-row input { flex:1; background:#111318; border:1px solid #2d3142; border-radius:4px;
+      color:#e1e1e1; font-size:.75rem; padding:3px 6px; }
+    .act-meta-row input:focus { outline:none; border-color:#42a5f5; }
+    .act-meta-row input::placeholder { color:#444; }
     .section-sep { border:none; border-top:1px solid #2d3142; margin:18px 0 14px; }
 
     .quick-room-card {
@@ -190,7 +218,7 @@
   <div id="roster-step" style="display:none">
     <h2><span class="step-badge">2</span> Fernbedienungen pro Aktivität</h2>
     <p style="font-size:.82rem;color:#aaa;margin-bottom:14px">
-      Wähle pro Aktivität, welche virtuellen Fernbedienungen eingeblendet werden sollen.
+      Wähle pro Aktivität, welche Fernbedienungen eingeblendet werden sollen — und lege optional Anzeigename &amp; Icon fest.
     </p>
     <div class="roster-grid" id="roster-grid"></div>
     <div class="actions" style="margin-top:16px">
@@ -224,6 +252,82 @@
 </div><!-- .wizard-card -->
 
 <script>
+
+// ── Geteilter Icon-Picker (Modal) ─────────────────────────────────────────
+let _iconPickerCallback = null;
+let _iconPickerSelected = null;
+let _iconSearchTimer    = null;
+
+function openActIconPicker(actName) {
+  const safeId = actName.replace(/[^a-z0-9]/gi, '_');
+  const curIcon = document.getElementById('act-icon-v-' + safeId)?.value || 'mdi:play-circle';
+  openIconPicker(curIcon, (ic) => {
+    // Callback: icon in hidden-input + Preview aktualisieren
+    const inp = document.getElementById('act-icon-v-' + safeId);
+    const iEl = document.getElementById('act-icon-i-' + safeId);
+    const nEl = document.getElementById('act-icon-n-' + safeId);
+    if (inp) inp.value = ic;
+    if (iEl) iEl.className = 'mdi ' + ic.replace('mdi:', 'mdi-');
+    if (nEl) nEl.textContent = ic;
+  });
+}
+function openIconPicker(currentIcon, callback) {
+  _iconPickerCallback = callback;
+  _iconPickerSelected = currentIcon || null;
+  document.getElementById('icon-picker-overlay').classList.add('open');
+  const inp = document.getElementById('icon-picker-search');
+  inp.value = '';
+  iconPickerSearch('', currentIcon);
+  setTimeout(() => inp.focus(), 50);
+}
+function closeIconPicker() {
+  document.getElementById('icon-picker-overlay').classList.remove('open');
+  _iconPickerCallback = null;
+}
+function confirmIconPicker() {
+  if (_iconPickerSelected && _iconPickerCallback) _iconPickerCallback(_iconPickerSelected);
+  closeIconPicker();
+}
+function iconPickerSearch(q, preselect) {
+  clearTimeout(_iconSearchTimer);
+  _iconSearchTimer = setTimeout(async () => {
+    const n = q.trim() ? 9999 : 200;
+    const icons = await fetch(`/api/mdi-search?q=${encodeURIComponent(q)}&n=${n}`).then(r => r.json());
+    const grid = document.getElementById('icon-picker-grid');
+    grid.innerHTML = '';
+    const countEl = document.getElementById('icon-picker-count');
+    if (countEl) countEl.textContent = q.trim()
+      ? `${icons.length} Treffer`
+      : `${icons.length} von 7000+ — Suche eingeben für alle`;
+    icons.forEach(ic => {
+      const cls = ic.replace('mdi:', 'mdi-');
+      const el = document.createElement('div');
+      el.className = 'icon-pick-item' + (ic === (preselect || _iconPickerSelected) ? ' sel' : '');
+      el.innerHTML = `<i class="mdi ${cls}"></i><span>${ic.replace('mdi:', '')}</span>`;
+      el.onclick = () => {
+        grid.querySelectorAll('.icon-pick-item').forEach(x => x.classList.remove('sel'));
+        el.classList.add('sel');
+        _iconPickerSelected = ic;
+        document.getElementById('icon-picker-selected-preview').innerHTML =
+          `<i class="mdi ${cls}" style="font-size:1.5rem;color:#90caf9"></i>`;
+        document.getElementById('icon-picker-selected-name').textContent = ic;
+      };
+      grid.appendChild(el);
+    });
+    if (preselect && !icons.includes(preselect)) {
+      const cls = preselect.replace('mdi:', 'mdi-');
+      document.getElementById('icon-picker-selected-preview').innerHTML =
+        `<i class="mdi ${cls}" style="font-size:1.5rem;color:#90caf9"></i>`;
+      document.getElementById('icon-picker-selected-name').textContent = preselect;
+    }
+  }, 250);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeIconPicker();
+  if (e.key === 'Enter' && document.getElementById('icon-picker-overlay')?.classList.contains('open')) {
+    e.preventDefault(); confirmIconPicker();
+  }
+});
 
 // ── Raum aus Schnellauswahl laden ─────────────────────────────────────────
 async function loadFromRoom(roomId, roomName, hubEntity, confName) {
@@ -262,6 +366,7 @@ async function loadFromRoom(roomId, roomName, hubEntity, confName) {
   if (!res.ok) { st.innerHTML = `<span class="status err">${data.error}</span>`; return; }
   _activities = data.activities;
   _devices    = data.devices;
+  await loadSavedScenarios(roomId);
   renderRoster();
 
   // Gespeicherte Roster-Auswahl anwenden
@@ -284,6 +389,25 @@ async function loadFromRoom(roomId, roomName, hubEntity, confName) {
 let _devices    = [];
 let _activities = {};
 let _roomId     = '';
+let _savedScenarios = {};   // {actId: {label, icon}}
+
+async function loadSavedScenarios(roomId) {
+  if (!roomId) return;
+  try {
+    const res  = await fetch('/api/scenarios/' + roomId);
+    if (!res.ok) return;
+    const list = await res.json();
+    // Scenarios-API gibt [{id, name, label, icon}, ...] zurück
+    // id = Harmony-Aktivitätsname (= actName), nicht actId
+    // Wir indexieren nach actName für renderRoster
+    _savedScenarios = {};
+    // Indexiere nach name (Harmony-Aktivitätsname) für renderRoster-Lookup
+    list.forEach(s => {
+      const key = s.name || s.id;
+      _savedScenarios[key] = {label: s.label||'', icon: s.icon||'', _slug: s.id};
+    });
+  } catch(e) { /* ignorieren */ }
+}
 
 // ── Quelle wählen ─────────────────────────────────────────────────────────
 function selectSource(src) {
@@ -337,6 +461,8 @@ async function loadConf() {
 
   st.innerHTML = `<span class="status ok">✓ ${_devices.length} Geräte, ${Object.keys(_activities).length} Aktivitäten geladen.</span>`;
 
+  const roomId2 = document.getElementById('room-id')?.value?.trim();
+  if (roomId2) await loadSavedScenarios(roomId2);
   renderRoster();
   document.getElementById('roster-step').style.display = 'block';
   document.getElementById('gen-btn').disabled = false;
@@ -349,15 +475,38 @@ function renderRoster() {
   const grid = document.getElementById('roster-grid');
   grid.innerHTML = '';
   for (const [actId, actName] of Object.entries(_activities)) {
+    const saved = _savedScenarios[actName] || {};
     const card = document.createElement('div');
     card.className = 'activity-card';
-    card.innerHTML = `<div class="act-name">▶ ${actName}</div>` +
+    card.innerHTML =
+      `<div class="act-name">▶ ${actName}</div>` +
       _devices.map(d => `
         <label class="device-row">
           <input type="checkbox" class="roster-cb"
                  data-act="${actId}" data-dev="${d.name}" checked>
           <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
-        </label>`).join('');
+        </label>`).join('') +
+      `<div class="act-meta">
+        <div class="act-meta-row">
+          <label>Anzeigename</label>
+          <input type="text" class="act-label-input"
+                 data-act="${actName}" data-slug="${(saved._slug||'').replace(/"/g,'&quot;')}"
+                 value="${(saved.label||'').replace(/"/g,'&quot;')}"
+                 placeholder="${actName}">
+        </div>
+        <div class="act-meta-row">
+          <label>Icon</label>
+          <button type="button" class="act-icon-btn"
+                  data-act="${actName}"
+                  onclick="openActIconPicker('${actName.replace(/'/g,'\'')}')">
+            <i class="mdi ${((saved.icon||'mdi:play-circle').replace('mdi:','mdi-'))}" id="act-icon-i-${actName.replace(/[^a-z0-9]/gi,'_')}"></i>
+            <span id="act-icon-n-${actName.replace(/[^a-z0-9]/gi,'_')}">${saved.icon||'mdi:play-circle'}</span>
+          </button>
+          <input type="hidden" class="act-icon-input" data-act="${actName}"
+                 id="act-icon-v-${actName.replace(/[^a-z0-9]/gi,'_')}"
+                 value="${saved.icon||''}">
+        </div>
+      </div>`;
     grid.appendChild(card);
   }
 }
@@ -387,6 +536,21 @@ async function generate() {
     if (!roster[cb.dataset.act]) roster[cb.dataset.act] = [];
     if (cb.checked) roster[cb.dataset.act].push(cb.dataset.dev);
   });
+
+  // Scenario-Labels + Icons sammeln und speichern
+  const scenariosPayload = [];
+  document.querySelectorAll('.act-label-input').forEach(inp => {
+    const actName = inp.dataset.act;
+    const iconInp = document.querySelector(`.act-icon-input[data-act="${CSS.escape(actName)}"]`);
+    const slug = inp.dataset.slug || actName;
+    scenariosPayload.push({id: slug, label: inp.value.trim(), icon: (iconInp?.value||'').trim()});
+  });
+  if (scenariosPayload.length && roomId) {
+    await fetch('/api/scenarios/' + roomId, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(scenariosPayload)
+    });
+  }
 
   st.innerHTML = '<span><span class="spinner"></span> Generiere Modell &amp; Karte…</span>';
   document.getElementById('gen-btn').disabled = true;
@@ -442,5 +606,26 @@ function openEditor() {
   if (_roomId) window.location.href = `/editor/${_roomId}`;
 }
 </script>
+
+<!-- ── Icon-Picker Modal ─────────────────────────────────────────────── -->
+<div id="icon-picker-overlay" onclick="if(event.target===this)closeIconPicker()">
+  <div id="icon-picker-box">
+    <div id="icon-picker-header">
+      <span style="font-size:.8rem;font-weight:600;color:#90caf9;white-space:nowrap">Symbol wählen</span>
+      <input id="icon-picker-search" type="search"
+             placeholder="Suchen… z.B. television, remote, satellite"
+             oninput="iconPickerSearch(this.value)">
+      <button onclick="closeIconPicker()" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div id="icon-picker-grid"></div>
+    <div id="icon-picker-footer">
+      <div id="icon-picker-selected-preview"><i class="mdi mdi-play-circle" style="font-size:1.5rem;color:#90caf9"></i></div>
+      <span id="icon-picker-selected-name" style="flex:1;font-size:.78rem;color:#aaa;font-family:monospace">—</span>
+      <span id="icon-picker-count" style="font-size:.7rem;color:#555"></span>
+      <button class="btn btn-primary" style="font-size:.8rem;padding:5px 14px" onclick="confirmIconPicker()">✓ Übernehmen</button>
+      <button class="btn" style="font-size:.8rem;padding:5px 10px" onclick="closeIconPicker()">Abbrechen</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -408,7 +408,7 @@ def build_device_card(device, hub, hub_entity, style_config=None):
             "styles":card_styles(accent, style_config),
             "grid_options":{"columns":"full","rows":"auto"}}
 
-def build_scenario_card(model, hub, hub_entity, overrides=None):
+def build_scenario_card(model, hub, hub_entity, overrides=None, style_config=None):
     acts, refs = [], []
     ov=overrides or {}
     for s in model["scenarios"]:
@@ -495,7 +495,7 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
     # Sections-View: Scenario oben (volle Breite), danach pro Gerät eine Section
     scenario_section={
         "type":"grid","column_span":4,"columns":48,"rows":"auto",
-        "cards":[build_scenario_card(model,hub,hub_entity,overrides)]
+        "cards":[build_scenario_card(model,hub,hub_entity,overrides,style_config=style_config)]
     }
     dev_sections=[]
     for did in seen:
