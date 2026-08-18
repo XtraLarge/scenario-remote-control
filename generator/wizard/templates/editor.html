@@ -14,10 +14,14 @@
     .canvas-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#444;font-size:.85rem;text-align:center;line-height:1.8}
     .props{background:#1e2128;border:1px solid #2d3142;border-radius:8px;padding:10px;overflow-y:auto}
     .section-block{background:#252830;border:1px solid #2d3142;border-radius:6px;padding:7px;margin-bottom:6px}
+    .section-block.has-frame{border-color:#607d8b;box-shadow:0 0 0 1px rgba(96,125,139,.25)}
     .section-header{display:flex;align-items:center;gap:5px;margin-bottom:5px}
     .section-title-input{background:none;border:none;border-bottom:1px solid transparent;color:#90caf9;font-size:.8rem;font-weight:600;flex:1;outline:none;padding:2px 4px;cursor:text}
     .section-title-input:focus{border-bottom-color:#2196f3;background:#111318;border-radius:3px 3px 0 0}
     .section-title-input:hover{background:#1e2128;border-radius:3px}
+    .sec-opt{display:inline-flex;align-items:center;gap:3px;font-size:.65rem;color:#555;cursor:pointer;padding:2px 5px;border-radius:4px;border:1px solid #333;background:none;white-space:nowrap;user-select:none}
+    .sec-opt.active{color:#90a4ae;border-color:#607d8b;background:rgba(96,125,139,.12)}
+    .sec-opt:hover{border-color:#607d8b;color:#90a4ae}
     .btn-icon{background:none;border:none;color:#555;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:.85rem}
     .btn-icon:hover{color:#e1e1e1;background:#3d4156}
     /* ── Matrix-Grid ───────────────────────────────────────── */
@@ -607,10 +611,20 @@ function renderCanvas() {
   sections.forEach((sec, si) => {
     const sb = document.createElement('div'); sb.className='section-block';
     const hdr = document.createElement('div'); hdr.className='section-header';
+    if(sec.frame===undefined) sec.frame=false;
+    if(sec.showTitle===undefined) sec.showTitle=false;
+    if(sec.frame) sb.classList.add('has-frame');
     hdr.innerHTML=`<button class="btn-icon" onclick="moveSection(${si},-1)" title="Section ↑">▲</button>
       <button class="btn-icon" onclick="moveSection(${si},1)"  title="Section ↓">▼</button>
       <input class="section-title-input" value="${esc(sec.title)}" placeholder="Section-Name…"
              onchange="sections[${si}].title=this.value" title="Klicken zum Umbenennen">
+      <button class="sec-opt${sec.frame?' active':''}"
+              onclick="sections[${si}].frame=!sections[${si}].frame;renderCanvas()"
+              title="Rahmen in HA">⬜ Rahmen</button>
+      <button class="sec-opt${(sec.showTitle&&sec.frame)?' active':''}"
+              style="${sec.frame?'':'opacity:.35;pointer-events:none'}"
+              onclick="if(sections[${si}].frame){sections[${si}].showTitle=!sections[${si}].showTitle;renderCanvas();}"
+              title="Titel als Überschrift">T Titel</button>
       <button class="btn-icon" onclick="addRow(${si})">＋ Reihe</button>
       <button class="btn-icon" onclick="removeSection(${si})" title="Section löschen">🗑</button>`;
     sb.appendChild(hdr);
@@ -1042,8 +1056,18 @@ function exportLayout(){
   const dev=currentDevice, bk=dev.backend?.harmony||{};
   const devId=bk.device_id||bk.device, hubEnt=MODEL.hubs?.[0]?.entity||'';
   const rows=[], acts=[], seen=new Set();
-  sections.forEach(sec=>{
+  sections.forEach((sec,si)=>{
     if(sec.title) rows.push(`##${sec.title}`);
+    if(sec.frame){
+      const lname=`${dev.id}_frm${si}`;
+      const ltxt=(sec.showTitle&&sec.title)?sec.title:'';
+      if(!seen.has(lname)){seen.add(lname);
+        acts.push({type:'button',name:lname,label:ltxt,haptics:false,
+          tap_action:{action:'none'},
+          styles:':host{background:rgba(255,255,255,0.04);border-top:2px solid var(--accent-color);border-left:2px solid var(--accent-color);border-radius:4px 4px 0 0;padding:2px 8px}'
+            +(ltxt?'.label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--secondary-text-color)}':'')});}
+      rows.push([lname]);
+    }
     sec.rows.forEach(row=>{
       const rowRef=[];
       row.cells.forEach(cell=>{
