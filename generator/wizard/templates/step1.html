@@ -45,7 +45,8 @@
       font-weight:600; padding:2px 7px; border-radius:10px; margin-right:6px; vertical-align:middle; }
     .room-id-hint { font-size:.72rem; color:#666; margin-top:3px; }
     .activity-card { display:flex; flex-direction:column; gap:0; }
-    .act-meta { margin-top:8px; padding-top:8px; border-top:1px solid #2d3142; display:flex; flex-direction:column; gap:5px; }
+    .act-meta { margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #2d3142; display:flex; flex-direction:column; gap:5px; }
+    .act-fb-label { font-size:.7rem; color:#555; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
     .act-meta-row { display:flex; align-items:center; gap:6px; }
     .act-meta-row label { font-size:.7rem; color:#777; width:90px; flex-shrink:0; }
     .act-meta-row input { flex:1; background:#111318; border:1px solid #2d3142; border-radius:4px;
@@ -476,17 +477,14 @@ function renderRoster() {
   grid.innerHTML = '';
   for (const [actId, actName] of Object.entries(_activities)) {
     const saved = _savedScenarios[actName] || {};
+    const safeId = actName.replace(/[^a-z0-9]/gi, '_');
     const card = document.createElement('div');
     card.className = 'activity-card';
-    card.innerHTML =
-      `<div class="act-name">▶ ${actName}</div>` +
-      _devices.map(d => `
-        <label class="device-row">
-          <input type="checkbox" class="roster-cb"
-                 data-act="${actId}" data-dev="${d.name}" checked>
-          <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
-        </label>`).join('') +
-      `<div class="act-meta">
+
+    // ── 1. Aktivitäts-Identität ──────────────────────────────────────
+    const metaHtml =
+      `<div class="act-name">▶ ${actName}</div>
+      <div class="act-meta">
         <div class="act-meta-row">
           <label>Anzeigename</label>
           <input type="text" class="act-label-input"
@@ -496,17 +494,28 @@ function renderRoster() {
         </div>
         <div class="act-meta-row">
           <label>Icon</label>
-          <button type="button" class="act-icon-btn"
-                  data-act="${actName}"
-                  onclick="openActIconPicker('${actName.replace(/'/g,'\'')}')">
-            <i class="mdi ${((saved.icon||'mdi:play-circle').replace('mdi:','mdi-'))}" id="act-icon-i-${actName.replace(/[^a-z0-9]/gi,'_')}"></i>
-            <span id="act-icon-n-${actName.replace(/[^a-z0-9]/gi,'_')}">${saved.icon||'mdi:play-circle'}</span>
+          <button type="button" class="act-icon-btn" data-act="${actName}"
+                  onclick="openActIconPicker(this.dataset.act)">
+            <i class="mdi ${((saved.icon||'mdi:play-circle').replace('mdi:','mdi-'))}"
+               id="act-icon-i-${safeId}"></i>
+            <span id="act-icon-n-${safeId}">${saved.icon||'mdi:play-circle'}</span>
           </button>
           <input type="hidden" class="act-icon-input" data-act="${actName}"
-                 id="act-icon-v-${actName.replace(/[^a-z0-9]/gi,'_')}"
-                 value="${saved.icon||''}">
+                 id="act-icon-v-${safeId}" value="${saved.icon||''}">
         </div>
       </div>`;
+
+    // ── 2. FB-Auswahl ────────────────────────────────────────────────
+    const fbHtml =
+      `<div class="act-fb-label">Fernbedienungen einblenden</div>` +
+      _devices.map(d =>
+        `<label class="device-row">
+          <input type="checkbox" class="roster-cb"
+                 data-act="${actId}" data-dev="${d.name}" checked>
+          <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
+        </label>`).join('');
+
+    card.innerHTML = metaHtml + fbHtml;
     grid.appendChild(card);
   }
 }
