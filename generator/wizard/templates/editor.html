@@ -787,7 +787,7 @@ function renderProps() {
   if(!cell){panel.innerHTML='<span style="color:#444">—</span>';return;}
   const cmds=currentDevice?.cmds||[];
   const gc=document.getElementById('grid-cols').value||12;
-  const typeOpts=['button','spacer','circlepad','dpad','numpad','volume','touchpad','slider','stack'']
+  const typeOpts=['button','spacer','circlepad','dpad','numpad','volume','touchpad','slider','stack']
     .map(t=>`<option value="${t}" ${cell.type===t?'selected':''}>${t}</option>`).join('');
 
   let html=`
