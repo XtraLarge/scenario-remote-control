@@ -25,6 +25,18 @@
       font-weight:600; padding:2px 7px; border-radius:10px; margin-right:6px; vertical-align:middle; }
     .room-id-hint { font-size:.72rem; color:#666; margin-top:3px; }
     .section-sep { border:none; border-top:1px solid #2d3142; margin:18px 0 14px; }
+
+    .quick-room-card {
+      background:#1e2128; border:2px solid #2d3142; border-radius:8px;
+      padding:10px 14px; cursor:pointer; transition:border-color .15s, background .15s;
+      min-width:150px; user-select:none;
+    }
+    .quick-room-card:hover  { border-color:#90caf9; background:#1f2a3a; }
+    .quick-room-card.active { border-color:#42a5f5; background:#1a2a40; }
+    .qrc-name  { font-size:.9rem; font-weight:700; color:#e1e1e1; margin-bottom:3px; }
+    .qrc-meta  { font-size:.72rem; color:#888; margin-bottom:2px; }
+    .qrc-entity{ font-size:.68rem; color:#555; font-family:monospace; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
+    .qrc-cta   { font-size:.72rem; color:#42a5f5; font-weight:600; }
   </style>
 </head>
 <body>
@@ -38,6 +50,36 @@
       <small>scenario-remote-control · Konfiguration &amp; Fernbedienungs-Auswahl</small>
     </div>
   </div>
+
+
+  <!-- ── Bereits konfigurierte Räume ──────────────────────────── -->
+  {% if configured_rooms %}
+  <div style="margin-bottom:16px">
+    <div style="font-size:.7rem;font-weight:700;color:#90caf9;text-transform:uppercase;
+                letter-spacing:.07em;margin-bottom:8px">Bereits konfiguriert</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px" id="quick-room-list">
+      {% for r in configured_rooms %}
+      <div class="quick-room-card" onclick="loadFromRoom('{{ r.id }}','{{ r.name }}','{{ r.hub_entity }}','{{ r.conf_name }}')"
+           id="qrc-{{ r.id }}">
+        <div class="qrc-name">🏠 {{ r.name }}</div>
+        <div class="qrc-meta">{{ r.devices }} Geräte · {{ r.activities }} Aktivitäten</div>
+        <div class="qrc-entity">{{ r.hub_entity }}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          <div class="qrc-cta" onclick="event.stopPropagation();window.location='/editor/{{ r.id }}'">
+            ✏️ Editor
+          </div>
+          <div class="qrc-cta" style="color:#aaa" id="qrc-load-{{ r.id }}">↺ Neu laden</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="font-size:.72rem;color:#555;margin-top:6px">
+      Karte anklicken → Einstellungen vorausfüllen &amp; Aktivitäten laden · ✏️ Editor = direkt zum Layout
+    </div>
+  </div>
+  <hr class="section-sep" style="margin:0 0 18px">
+  {% endif %}
+
 
   <!-- Schritt 1a: Quelle -->
   <div class="step">
@@ -182,6 +224,63 @@
 </div><!-- .wizard-card -->
 
 <script>
+
+// ── Raum aus Schnellauswahl laden ─────────────────────────────────────────
+async function loadFromRoom(roomId, roomName, hubEntity, confName) {
+  document.querySelectorAll('.quick-room-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('qrc-' + roomId);
+  if (card) card.classList.add('active');
+  const lbl = document.getElementById('qrc-load-' + roomId);
+  if (lbl) lbl.textContent = '⟳ Lade…';
+
+  let cfg;
+  try {
+    const r = await fetch('/api/room-config/' + roomId);
+    cfg = await r.json();
+    if (cfg.error) { alert('Fehler: ' + cfg.error); if(lbl) lbl.textContent='↺ Neu laden'; return; }
+  } catch(e) { alert('Verbindungsfehler'); return; }
+
+  // Formular vorausfüllen
+  const confSel = document.getElementById('conf-file');
+  if (confSel && cfg.conf_name) {
+    for (const opt of confSel.options) {
+      if (opt.value === cfg.conf_name) { confSel.value = cfg.conf_name; break; }
+    }
+  }
+  if (cfg.hub_entity) await loadRemoteEntities(cfg.hub_entity);
+  document.getElementById('room-id').value   = cfg.room_id   || roomId;
+  document.getElementById('room-name').value = cfg.room_name || roomName;
+
+  // Conf laden → Roster aufbauen
+  const st = document.getElementById('load-status');
+  st.innerHTML = '<span><span class="spinner"></span> Lade Conf…</span>';
+  const res  = await fetch('/api/load-conf', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({conf: cfg.conf_name || confName})
+  });
+  const data = await res.json();
+  if (!res.ok) { st.innerHTML = `<span class="status err">${data.error}</span>`; return; }
+  _activities = data.activities;
+  _devices    = data.devices;
+  renderRoster();
+
+  // Gespeicherte Roster-Auswahl anwenden
+  if (cfg.roster && Object.keys(cfg.roster).length) {
+    document.querySelectorAll('.roster-cb').forEach(cb => {
+      // Roster ist nach Activity-NAME gegliedert; data-act = numerische ID
+      const actName   = _activities[cb.dataset.act] || cb.dataset.act;
+      const savedDevs = cfg.roster[actName];
+      if (savedDevs !== undefined) cb.checked = savedDevs.includes(cb.dataset.dev);
+    });
+  }
+  st.innerHTML = `<span class="status ok">✓ ${_devices.length} Geräte, ${Object.keys(_activities).length} Aktivitäten — aus gespeicherter Konfig</span>`;
+  document.getElementById('roster-step').style.display = 'block';
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('result-step').style.display = 'none';
+  document.getElementById('roster-step').scrollIntoView({behavior:'smooth', block:'start'});
+  if (lbl) lbl.textContent = '↺ Neu laden';
+}
+
 let _devices    = [];
 let _activities = {};
 let _roomId     = '';
@@ -193,7 +292,7 @@ function selectSource(src) {
 }
 
 // ── HA Remote-Entities laden ──────────────────────────────────────────────
-async function loadRemoteEntities() {
+async function loadRemoteEntities(preselect) {
   const hint = document.getElementById('entity-load-hint');
   const sel  = document.getElementById('hub-entity');
   hint.textContent = '⟳ Lade Entities aus HA…';
@@ -206,6 +305,11 @@ async function loadRemoteEntities() {
       ? remotes.map(e => `<option value="${e}">${e}</option>`).join('')
       : '<option value="">— keine remote.* gefunden —</option>';
     hint.textContent = `${remotes.length} Entity/ies gefunden`;
+    if (preselect) {
+      for (const opt of sel.options) {
+        if (opt.value === preselect) { sel.value = preselect; break; }
+      }
+    }
   } catch(e) {
     hint.textContent = '⚠ Verbindung fehlgeschlagen. Wizard.env korrekt?';
   }

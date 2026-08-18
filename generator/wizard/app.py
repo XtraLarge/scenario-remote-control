@@ -22,6 +22,29 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 def list_confs():
     return sorted(os.path.basename(f) for f in glob.glob(os.path.join(LOCAL, "harmony_*.conf")))
 
+def list_configured_rooms():
+    """Bereits konfigurierte Räume aus data/local/*.model.json."""
+    rooms = []
+    for f in sorted(glob.glob(os.path.join(LOCAL, "*.model.json"))):
+        room_id = os.path.basename(f).replace(".model.json", "")
+        try:
+            with open(f, encoding="utf-8") as fh:
+                m = json.load(fh)
+            hubs = m.get("hubs", [])
+            hub  = hubs[0] if hubs else {}
+            rooms.append({
+                "id":         room_id,
+                "name":       hub.get("name", room_id.upper()),
+                "hub_entity": hub.get("entity", ""),
+                "conf_name":  "",   # wird in room-config live ermittelt
+                "devices":    len(m.get("devices", [])),
+                "activities": len(m.get("scenarios", [])),
+            })
+        except Exception:
+            pass
+    return rooms
+
+
 def load_harmony(filename):
     path = os.path.join(LOCAL, filename)
     with open(path, encoding="utf-8") as f:
@@ -34,8 +57,73 @@ def hub_id_from_conf_name(filename):
 # ── Routen ───────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
-    confs = list_confs()
-    return render_template("step1.html", conf_files=confs)
+    confs  = list_confs()
+    rooms  = list_configured_rooms()
+    return render_template("step1.html", conf_files=confs, configured_rooms=rooms)
+
+@app.route("/api/room-config/<room_id>")
+def api_room_config(room_id):
+    """Gespeicherte Konfiguration eines Raums zurückgeben (für Vorauswahl)."""
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    map_path   = os.path.join(LOCAL, f"{room_id}.map.json")
+    if not os.path.exists(model_path):
+        return jsonify({"error": "Kein Modell gefunden"}), 404
+    with open(model_path, encoding="utf-8") as f:
+        model = json.load(f)
+
+    # Modell-Struktur: hubs[] statt hub{}
+    hubs       = model.get("hubs", [])
+    hub        = hubs[0] if hubs else {}
+    hub_entity = hub.get("entity", "")
+    room_name  = hub.get("name", room_id.upper())
+
+    # conf_name aus map.json (dort beim Generieren gespeichert) oder auto-detect
+    conf_name = ""
+    if os.path.exists(map_path):
+        with open(map_path, encoding="utf-8") as f:
+            mp = json.load(f)
+        conf_name = mp.get("conf_name", "")
+        if not conf_name:
+            # Fallback: harmony_*.conf nach Geräte-Übereinstimmung suchen
+            map_devs = set(mp.get("devices", {}).keys())
+            for cf in list_confs():
+                try:
+                    hconf = load_harmony(cf)
+                    cdevs = set(hconf.get("Devices", {}).keys())
+                    if map_devs and map_devs.issubset(cdevs | {d.lower() for d in cdevs}):
+                        conf_name = cf; break
+                    if len(map_devs & cdevs) >= max(1, len(map_devs) // 2):
+                        conf_name = cf; break
+                except Exception:
+                    pass
+
+    # Geräte-ID → Geräte-Name (Harmony-Name, wie in renderRoster data-dev)
+    dev_names = {d["id"]: d.get("name", d["id"]) for d in model.get("devices", [])}
+
+    # Roster: activity-NAME → [device-NAME] (passt zu data-act/data-dev im JS)
+    # Quelle: map.json (scenarios nach Harmony-Aktivitätsname gegliedert)
+    roster = {}
+    if os.path.exists(map_path):
+        with open(map_path, encoding="utf-8") as fmp:
+            mp = json.load(fmp)
+        for act_name, s in mp.get("scenarios", {}).items():
+            devs = [dev_names.get(d, d) for d in s.get("devices", [])]
+            roster[act_name] = devs
+    else:
+        # Fallback: model.json scenarios (name statt ID)
+        for s in model.get("scenarios", []):
+            act_name = s.get("name", s.get("id", ""))
+            devs = [dev_names.get(d, d) for d in s.get("devices", [])]
+            if act_name:
+                roster[act_name] = devs
+
+    return jsonify({
+        "room_id":    room_id,
+        "room_name":  room_name,
+        "hub_entity": hub_entity,
+        "conf_name":  conf_name,
+        "roster":     roster,
+    })
 
 @app.route("/api/load-conf", methods=["POST"])
 def api_load_conf():
@@ -349,6 +437,47 @@ def api_save_layout():
         capture_output=True, text=True, cwd=REPO
     )
     return jsonify({"ok": r.returncode == 0, "stdout": r.stdout.strip(), "stderr": r.stderr[:300]})
+
+@app.route("/api/scenarios/<room_id>", methods=["GET"])
+def get_scenarios(room_id):
+    """Szenario-Konfiguration lesen (Labels + Icons)."""
+    sce_path = os.path.join(LOCAL, f"{room_id}.scenarios.json")
+    data = json.load(open(sce_path)) if os.path.exists(sce_path) else {}
+    # Modell-Szenarien als Basis zurückgeben
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    if not os.path.exists(model_path):
+        return jsonify([])
+    model = json.load(open(model_path))
+    result = []
+    for s in model.get("scenarios", []):
+        sid = s["id"]
+        override = data.get(sid, {})
+        result.append({
+            "id": sid,
+            "name": s["name"],
+            "label": override.get("label", ""),
+            "icon":  override.get("icon",  ""),
+        })
+    return jsonify(result)
+
+@app.route("/api/scenarios/<room_id>", methods=["POST"])
+def save_scenarios(room_id):
+    """Szenario-Konfiguration speichern und Karte neu bauen."""
+    scenarios = request.json  # [{id, label, icon}, ...]
+    sce_path = os.path.join(LOCAL, f"{room_id}.scenarios.json")
+    os.makedirs(LOCAL, exist_ok=True)
+    overrides = {s["id"]: {k: s[k] for k in ("label","icon") if s.get(k)} for s in scenarios}
+    with open(sce_path, "w") as f:
+        json.dump(overrides, f, indent=2, ensure_ascii=False)
+    # Karte neu bauen
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    card_path  = os.path.join(CARDS, f"{room_id}.yaml")
+    r = subprocess.run(
+        [sys.executable, os.path.join(GEN, "build_cards.py"),
+         "--model", model_path, "--out", card_path],
+        capture_output=True, text=True, cwd=REPO)
+    return jsonify({"ok": r.returncode == 0, "stderr": r.stderr[:200]})
+
 
 def _load_wizard_env():
     path = os.path.join(LOCAL, "wizard.env")
