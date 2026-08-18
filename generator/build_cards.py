@@ -368,11 +368,11 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
         short=SCENARIO_LABELS.get(slug) or (raw.split(None,1)[-1].title() if " " in raw else raw.title())
         label=ov.get(s["id"],{}).get("label") or short
         icon=ov.get(s["id"],{}).get("icon") or SCENARIO_ICONS.get(slug,"mdi:play-circle")
-        # Aktive Aktivität hervorheben: styles als CSS-Template-String (URC renderTemplate)
+        # Aktive Aktivität hervorheben: styles als CSS mit Selektoren (URC rendert in <style>-Tag)
         act_tpl = f"is_state_attr('{hub_entity}', 'current_activity', '{activity}')"
         hl_styles = (
-            f"background: {{{{ 'rgba(255,255,255,0.18)' if {act_tpl} else 'none' }}}};"
-            f" --icon-color: {{{{ 'var(--accent-color)' if {act_tpl} else 'var(--primary-text-color)' }}}};"
+            f":host {{ background: {{{{ 'rgba(255,255,255,0.18)' if {act_tpl} else 'none' }}}}; }}"
+            f" .icon {{ color: {{{{ 'var(--accent-color)' if {act_tpl} else 'var(--primary-text-color)' }}}}; }}"
         )
         acts.append({"type":"button","name":name,"haptics":True,"icon":icon,"label":label,
                      "tap_action":{"action":"perform-action","perform_action":"remote.turn_on",
