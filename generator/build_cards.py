@@ -313,7 +313,8 @@ def build_device_card(device, hub, hub_entity):
     rows,acts=tmpl(pid,cids,hub_entity,dev_id,accent=accent)
     return {"type":"custom:universal-remote-card","title":device["name"],
             "entity":hub_entity,"rows":rows,"custom_actions":acts,
-            "styles":card_styles(accent)}
+            "styles":card_styles(accent),
+            "grid_options":{"columns":"full","rows":"auto"}}
 
 def build_scenario_card(model, hub, hub_entity, overrides=None):
     acts, refs = [], []
@@ -338,7 +339,8 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
     all_rows = [["power_off"], refs]
     return {"type":"custom:universal-remote-card","entity":hub_entity,
             "rows":all_rows,"custom_actions":acts,
-            "styles":card_styles("#ef4444")}
+            "styles":card_styles("#ef4444"),
+            "grid_options":{"columns":"full","rows":"auto"}}
 
 def activity_conditions(device_id, model, hub):
     """OR-Conditions direkt auf remote.current_activity — kein extra Sensor nötig.
