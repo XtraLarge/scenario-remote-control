@@ -219,6 +219,60 @@
         <button class="btn" onclick="saveScenarios()" style="margin-top:6px;width:100%;font-size:.8rem">💾 Szenarien speichern</button>
         <div id="sce-status" style="font-size:.75rem;margin-top:4px"></div>
       </div>
+
+      <!-- 🎨 Card-Style-Panel -->
+      <div style="border-top:1px solid #2d3142;padding-top:10px;margin-top:10px">
+        <div class="panel-title" style="cursor:pointer;user-select:none" onclick="toggleStylePanel()">
+          🎨 Card-Style <span id="style-panel-arrow" style="float:right;font-size:.7rem;color:#555">▼</span>
+        </div>
+        <div id="style-panel" style="display:none">
+          <div class="prop-group" style="margin-top:6px">
+            <label class="prop-label">Preset</label>
+            <select class="prop-input" id="style-preset" onchange="onStyleChange()">
+              <option value="gradient">Gradient (Standard)</option>
+              <option value="flat">Flat</option>
+              <option value="glass">Glass</option>
+              <option value="minimal">Minimal</option>
+              <option value="custom">Custom CSS</option>
+            </select>
+          </div>
+          <div id="style-params">
+            <div class="prop-group">
+              <label class="prop-label">Verlauf-Winkel: <span id="lbl-angle">135</span>°</label>
+              <input type="range" id="style-angle" min="0" max="360" value="135" oninput="document.getElementById('lbl-angle').textContent=this.value;onStyleChange()">
+            </div>
+            <div class="prop-group">
+              <label class="prop-label">Verlauf oben: <span id="lbl-mixlo">88</span>% BG</label>
+              <input type="range" id="style-mixlo" min="50" max="99" value="88" oninput="document.getElementById('lbl-mixlo').textContent=this.value;onStyleChange()">
+            </div>
+            <div class="prop-group">
+              <label class="prop-label">Verlauf unten: <span id="lbl-mixhi">72</span>% BG</label>
+              <input type="range" id="style-mixhi" min="40" max="99" value="72" oninput="document.getElementById('lbl-mixhi').textContent=this.value;onStyleChange()">
+            </div>
+            <div class="prop-group" style="display:flex;gap:8px">
+              <div style="flex:1">
+                <label class="prop-label">Rahmen: <span id="lbl-bw">2</span>px</label>
+                <input type="range" id="style-bw" min="0" max="8" value="2" oninput="document.getElementById('lbl-bw').textContent=this.value;onStyleChange()">
+              </div>
+              <div style="flex:1">
+                <label class="prop-label">Radius: <span id="lbl-br">12</span>px</label>
+                <input type="range" id="style-br" min="0" max="32" value="12" oninput="document.getElementById('lbl-br').textContent=this.value;onStyleChange()">
+              </div>
+            </div>
+            <div class="prop-group">
+              <label class="prop-label">Padding: <span id="lbl-pd">8</span>px</label>
+              <input type="range" id="style-pd" min="0" max="24" value="8" oninput="document.getElementById('lbl-pd').textContent=this.value;onStyleChange()">
+            </div>
+          </div>
+          <div id="style-custom-wrap" style="display:none" class="prop-group">
+            <label class="prop-label">Custom CSS ({{accent}} = Gerätefarbe)</label>
+            <textarea id="style-custom-css" class="prop-input" rows="6" style="font-family:monospace;font-size:.72rem;resize:vertical" oninput="onStyleChange()"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveCardStyle()" style="width:100%;margin-top:6px;font-size:.8rem">💾 Style speichern + deployen</button>
+          <div id="style-status" style="font-size:.75rem;margin-top:4px"></div>
+        </div>
+      </div>
+
       <div class="deploy-bar">
         <div style="display:flex;gap:6px;margin-bottom:4px">
           <button class="btn btn-primary" onclick="saveLayout()" style="flex:1" id="btn-save" disabled title="Gerät wählen um zu speichern">💾 Speichern</button>
@@ -1099,6 +1153,84 @@ function previewCell(cell, cols, gc) {
 }
 
 // ── Save & Deploy ──────────────────────────────────────────────────────────
+// ── Card-Style-Panel ─────────────────────────────────────────────────────────
+let _styleConfig = {};
+
+function toggleStylePanel() {
+  const p = document.getElementById('style-panel');
+  const a = document.getElementById('style-panel-arrow');
+  const open = p.style.display === 'none';
+  p.style.display = open ? '' : 'none';
+  a.textContent = open ? '▲' : '▼';
+  if (open) loadCardStyle();
+}
+
+async function loadCardStyle() {
+  const room = ROOM_ID;
+  try {
+    const r = await fetch(`/api/card-style/${room}`);
+    _styleConfig = await r.json();
+    applyStyleToUI(_styleConfig);
+  } catch(e) { console.warn('card-style laden:', e); }
+}
+
+function applyStyleToUI(cfg) {
+  const preset = cfg.preset || 'gradient';
+  document.getElementById('style-preset').value = preset;
+  document.getElementById('style-angle').value  = cfg.gradient_angle ?? 135;
+  document.getElementById('lbl-angle').textContent = cfg.gradient_angle ?? 135;
+  document.getElementById('style-mixlo').value  = cfg.gradient_mix_low ?? 88;
+  document.getElementById('lbl-mixlo').textContent = cfg.gradient_mix_low ?? 88;
+  document.getElementById('style-mixhi').value  = cfg.gradient_mix_high ?? 72;
+  document.getElementById('lbl-mixhi').textContent = cfg.gradient_mix_high ?? 72;
+  document.getElementById('style-bw').value     = cfg.border_width ?? 2;
+  document.getElementById('lbl-bw').textContent = cfg.border_width ?? 2;
+  document.getElementById('style-br').value     = cfg.border_radius ?? 12;
+  document.getElementById('lbl-br').textContent = cfg.border_radius ?? 12;
+  document.getElementById('style-pd').value     = cfg.padding ?? 8;
+  document.getElementById('lbl-pd').textContent = cfg.padding ?? 8;
+  if (cfg.custom_css) document.getElementById('style-custom-css').value = cfg.custom_css;
+  onStyleChange();
+}
+
+function onStyleChange() {
+  const preset = document.getElementById('style-preset').value;
+  const isCustom = preset === 'custom';
+  const isGradient = preset === 'gradient';
+  document.getElementById('style-params').style.display = isCustom ? 'none' : '';
+  document.getElementById('style-custom-wrap').style.display = isCustom ? '' : 'none';
+  _styleConfig = {
+    preset,
+    gradient_angle:    parseInt(document.getElementById('style-angle').value),
+    gradient_mix_low:  parseInt(document.getElementById('style-mixlo').value),
+    gradient_mix_high: parseInt(document.getElementById('style-mixhi').value),
+    border_width:      parseInt(document.getElementById('style-bw').value),
+    border_radius:     parseInt(document.getElementById('style-br').value),
+    padding:           parseInt(document.getElementById('style-pd').value),
+    custom_css:        document.getElementById('style-custom-css').value,
+  };
+}
+
+async function saveCardStyle() {
+  onStyleChange();
+  const st = document.getElementById('style-status');
+  st.textContent = '⏳ Speichern…';
+  try {
+    await fetch(`/api/card-style/${ROOM_ID}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(_styleConfig)
+    });
+    st.textContent = '✓ Style gespeichert — deploye…';
+    await deployRoom();
+    st.textContent = '✓ Style gespeichert + deployed';
+    st.style.color = '#4ade80';
+    setTimeout(() => { st.style.color=''; st.textContent=''; }, 4000);
+  } catch(e) {
+    st.textContent = '✗ Fehler: ' + e.message;
+    st.style.color = '#f87171';
+  }
+}
+
 // ── FB Export / Import ────────────────────────────────────────────────────
 function exportFB() {
   if (!currentDevice) { alert('Kein Gerät gewählt.'); return; }

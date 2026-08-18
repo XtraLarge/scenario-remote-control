@@ -16,26 +16,78 @@ DEVICE_ACCENT = {
     "fan":       "#94a3b8",
 }
 
-def card_styles(accent="#888888"):
+# ── Card-Style-Presets ───────────────────────────────────────────────────────
+DEFAULT_STYLE = {
+    "preset": "gradient",
+    "gradient_angle": 135, "gradient_mix_low": 88, "gradient_mix_high": 72,
+    "border_width": 2, "border_radius": 12, "padding": 8, "custom_css": "",
+}
+
+def _css_gradient(cfg, accent):
+    a  = cfg.get("gradient_angle",    135)
+    ml = cfg.get("gradient_mix_low",   88)
+    mh = cfg.get("gradient_mix_high",  72)
+    bw = cfg.get("border_width",        2)
+    br = cfg.get("border_radius",      12)
+    pd = cfg.get("padding",             8)
     return (
         f":host ha-card{{\n  --accent: {accent};\n}}\n"
         ":host ha-card{\n"
         "  --bg:  var(--ha-card-background, var(--card-background-color, #1c1c1c));\n"
         "  --txt: var(--primary-text-color);\n"
-        "  --gw: 2px; --gr: 12px;\n"
+        f"  --gw: {bw}px; --gr: {br}px;\n"
         "  --stroke: color-mix(in oklab, var(--txt) 65%, transparent);\n"
-        "  background: linear-gradient(\n"
-        "    135deg,\n"
-        "    color-mix(in oklab, var(--bg) 88%, var(--accent) 12%),\n"
-        "    color-mix(in oklab, var(--bg) 72%, var(--accent) 28%)\n"
+        f"  background: linear-gradient(\n"
+        f"    {a}deg,\n"
+        f"    color-mix(in oklab, var(--bg) {ml}%, var(--accent) {100-ml}%),\n"
+        f"    color-mix(in oklab, var(--bg) {mh}%, var(--accent) {100-mh}%)\n"
         "  ) !important;\n"
         "  border-radius: var(--gr);\n"
-        "  padding: 8px;\n"
+        f"  padding: {pd}px;\n"
         "  box-shadow:\n"
         "    inset 0 0 0 var(--gw) var(--stroke),\n"
         "    0 4px 12px rgba(0,0,0,.12);\n"
         "}\n"
     )
+
+def _css_flat(cfg, accent):
+    br = cfg.get("border_radius", 12); pd = cfg.get("padding", 8)
+    return (
+        f":host ha-card{{\n  --accent: {accent};\n}}\n"
+        ":host ha-card{\n"
+        f"  border-radius: {br}px;\n  padding: {pd}px;\n"
+        "  border: 1px solid color-mix(in oklab, var(--primary-text-color) 25%, transparent);\n"
+        "}\n"
+    )
+
+def _css_minimal(cfg, accent):
+    br = cfg.get("border_radius", 8); pd = cfg.get("padding", 4)
+    return (
+        f":host ha-card{{\n  --accent: {accent};\n}}\n"
+        f":host ha-card{{\n  border-radius: {br}px;\n  padding: {pd}px;\n}}\n"
+    )
+
+def _css_glass(cfg, accent):
+    br = cfg.get("border_radius", 16); pd = cfg.get("padding", 8)
+    return (
+        f":host ha-card{{\n  --accent: {accent};\n}}\n"
+        ":host ha-card{\n"
+        "  background: color-mix(in oklab, var(--accent) 15%, rgba(255,255,255,0.05)) !important;\n"
+        "  backdrop-filter: blur(10px);\n"
+        f"  border-radius: {br}px;\n  padding: {pd}px;\n"
+        "  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);\n"
+        "}\n"
+    )
+
+_PRESETS = {"gradient": _css_gradient, "flat": _css_flat,
+            "minimal": _css_minimal, "glass": _css_glass}
+
+def card_styles(accent="#888888", style_config=None):
+    cfg = {**DEFAULT_STYLE, **(style_config or {})}
+    preset = cfg.get("preset", "gradient")
+    if preset == "custom" and cfg.get("custom_css","").strip():
+        return cfg["custom_css"].replace("{{accent}}", accent)
+    return _PRESETS.get(preset, _css_gradient)(cfg, accent)
 
 # ── Icons / Labels ────────────────────────────────────────────────────────────
 ICONS = {
@@ -342,7 +394,7 @@ def tmpl_fan(pid, cids, hub_entity, dev_id, accent=None):
     return [refs[i:i+3] for i in range(0,len(refs),3)], acts
 
 # ── Karten / View ─────────────────────────────────────────────────────────────
-def build_device_card(device, hub, hub_entity):
+def build_device_card(device, hub, hub_entity, style_config=None):
     cmds=device.get("commands",[]); cids={c["id"] for c in cmds}; pid=device["id"]
     bk=(device.get("backend") or {}).get(hub["backend"],{})
     dev_id=bk.get("device_id") or bk.get("device")
@@ -353,7 +405,7 @@ def build_device_card(device, hub, hub_entity):
     rows,acts=tmpl(pid,cids,hub_entity,dev_id,accent=accent)
     return {"type":"custom:universal-remote-card","title":device["name"],
             "entity":hub_entity,"rows":rows,"custom_actions":acts,
-            "styles":card_styles(accent),
+            "styles":card_styles(accent, style_config),
             "grid_options":{"columns":"full","rows":"auto"}}
 
 def build_scenario_card(model, hub, hub_entity, overrides=None):
@@ -386,7 +438,7 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
     all_rows = [["power_off"], refs]
     return {"type":"custom:universal-remote-card","entity":hub_entity,
             "rows":all_rows,"custom_actions":acts,
-            "styles":card_styles("#ef4444"),
+            "styles":card_styles("#ef4444", style_config),
             "grid_options":{"columns":"full","rows":"auto"}}
 
 def activity_conditions(device_id, model, hub):
@@ -430,7 +482,7 @@ def _rows_from_layout(raw_rows):
             out.append(r)
     return out
 
-def build_view(model, hub, overrides=None, layout=None):
+def build_view(model, hub, overrides=None, layout=None, style_config=None):
     hub_entity=hub["entity"]; hub_id=hub["id"]
     dev_by_id={d["id"]:d for d in model["devices"]}
     seen_set=set()
@@ -456,11 +508,11 @@ def build_view(model, hub, overrides=None, layout=None):
             acts=lv.get("custom_actions",[])
             card={"type":"custom:universal-remote-card","title":dev["name"],
                   "entity":hub_entity,"rows":rows,"custom_actions":acts,
-                  "styles":card_styles(accent),
+                  "styles":card_styles(accent, style_config),
                   "grid_options":{"columns":"full","rows":"auto"}}
             print(f"  → {did}: Nutzer-Layout ({len(acts)} Actions)")
         else:
-            card=build_device_card(dev,hub,hub_entity)
+            card=build_device_card(dev,hub,hub_entity,style_config=style_config)
             print(f"  → {did}: Smart-Template")
         card=wrap_conditional(dev, hub_id, card, model=model, hub=hub)
         dev_sections.append({"type":"grid","columns":48,"rows":"auto","cards":[card]})
@@ -488,9 +540,12 @@ def main():
     layout_path=args.model.replace(".model.json",".layout.json")
     layout=json.load(open(layout_path,encoding="utf-8")) if os.path.exists(layout_path) else {}
     if layout: print(f"  Layout geladen: {layout_path} ({len(layout)} Geräte)")
+    style_path = args.model.replace(".model.json", ".cardstyle.json")
+    style_config = json.load(open(style_path, encoding="utf-8")) if os.path.exists(style_path) else {}
+    if style_config: print(f"  Style-Preset: {style_config.get('preset','gradient')}")
     views=[]
     for hub in model["hubs"]:
-        views.append(build_view(model,hub,overrides,layout=layout))
+        views.append(build_view(model,hub,overrides,layout=layout,style_config=style_config))
     os.makedirs(os.path.dirname(args.out),exist_ok=True)
     with open(args.out,"w",encoding="utf-8") as f:
         yaml.dump({"views":views},f,allow_unicode=True,sort_keys=False)

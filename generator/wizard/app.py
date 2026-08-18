@@ -479,6 +479,26 @@ def save_scenarios(room_id):
     return jsonify({"ok": r.returncode == 0, "stderr": r.stderr[:200]})
 
 
+@app.route("/api/card-style/<room_id>", methods=["GET"])
+def api_get_card_style(room_id):
+    """Style-Konfiguration für einen Raum laden."""
+    p = os.path.join(LOCAL, f"{room_id}.cardstyle.json")
+    if not os.path.exists(p):
+        # Default-Preset zurückgeben
+        from build_cards import DEFAULT_STYLE
+        return jsonify(DEFAULT_STYLE)
+    return jsonify(json.load(open(p, encoding="utf-8")))
+
+@app.route("/api/card-style/<room_id>", methods=["POST"])
+def api_save_card_style(room_id):
+    """Style-Konfiguration speichern."""
+    data = request.json or {}
+    p = os.path.join(LOCAL, f"{room_id}.cardstyle.json")
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    return jsonify({"ok": True})
+
+
 def _load_wizard_env():
     path = os.path.join(LOCAL, "wizard.env")
     if not os.path.exists(path):
