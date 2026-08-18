@@ -418,7 +418,19 @@ def wrap_conditional(device, hub_id, card, model=None, hub=None):
     return {"type":"conditional","conditions":conds,
             "card":{"type":"vertical-stack","cards":[card]}}
 
-def build_view(model, hub, overrides=None):
+def _rows_from_layout(raw_rows):
+    """##Section-Trennzeichen aus Editor-Rows entfernen; None → [None] (URC-Spacer)."""
+    out = []
+    for r in raw_rows:
+        if isinstance(r, str) and r.startswith("##"):
+            continue  # Section-Header = Editor-Intern, kein URC-Element
+        if r is None:
+            out.append([None])
+        else:
+            out.append(r)
+    return out
+
+def build_view(model, hub, overrides=None, layout=None):
     hub_entity=hub["entity"]; hub_id=hub["id"]
     dev_by_id={d["id"]:d for d in model["devices"]}
     seen_set=set()
@@ -436,7 +448,21 @@ def build_view(model, hub, overrides=None):
     dev_sections=[]
     for did in seen:
         dev=dev_by_id[did]
-        card=wrap_conditional(dev, hub_id, build_device_card(dev,hub,hub_entity), model=model, hub=hub)
+        accent=dev.get("accent","#2196f3")
+        # Gespeichertes Nutzer-Layout bevorzugen (aus Editor), sonst Smart-Template
+        if layout and did in layout and layout[did].get("custom_actions"):
+            lv=layout[did]
+            rows=_rows_from_layout(lv.get("rows",[]))
+            acts=lv.get("custom_actions",[])
+            card={"type":"custom:universal-remote-card","title":dev["name"],
+                  "entity":hub_entity,"rows":rows,"custom_actions":acts,
+                  "styles":card_styles(accent),
+                  "grid_options":{"columns":"full","rows":"auto"}}
+            print(f"  → {did}: Nutzer-Layout ({len(acts)} Actions)")
+        else:
+            card=build_device_card(dev,hub,hub_entity)
+            print(f"  → {did}: Smart-Template")
+        card=wrap_conditional(dev, hub_id, card, model=model, hub=hub)
         dev_sections.append({"type":"grid","columns":48,"rows":"auto","cards":[card]})
 
     return {"type":"sections","max_columns":4,
@@ -459,9 +485,12 @@ def main():
     args=p.parse_args()
     model=json.load(open(args.model,encoding="utf-8"))
     overrides=load_scenario_overrides(args.model)
+    layout_path=args.model.replace(".model.json",".layout.json")
+    layout=json.load(open(layout_path,encoding="utf-8")) if os.path.exists(layout_path) else {}
+    if layout: print(f"  Layout geladen: {layout_path} ({len(layout)} Geräte)")
     views=[]
     for hub in model["hubs"]:
-        views.append(build_view(model,hub,overrides))
+        views.append(build_view(model,hub,overrides,layout=layout))
     os.makedirs(os.path.dirname(args.out),exist_ok=True)
     with open(args.out,"w",encoding="utf-8") as f:
         yaml.dump({"views":views},f,allow_unicode=True,sort_keys=False)

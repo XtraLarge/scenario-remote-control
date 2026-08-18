@@ -937,6 +937,11 @@ function exportLayout(){
             if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
             if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
             if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+            // Farben → URC styles CSS-String
+            const _styleParts=[];
+            if(cell.props.color)      _styleParts.push(`.icon { color: ${cell.props.color}; }`);
+            if(cell.props.background) _styleParts.push(`:host { background: ${cell.props.background}; }`);
+            if(_styleParts.length)    a.styles=_styleParts.join(' ');
             acts.push(a);}
           return;
         }
