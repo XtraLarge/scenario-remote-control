@@ -156,18 +156,27 @@ def vol_row(pid, cids, hub_entity, dev_id):
             acts.append(btn(n, cid, hub_entity, dev_id))
     return row, acts
 
-def numpad_rows(pid, cids, hub_entity, dev_id):
-    """3×3 Ziffernblock + 0."""
-    acts = []
+_NUM_WORDS = {1:"one",2:"two",3:"three",4:"four",5:"five",
+              6:"six",7:"seven",8:"eight",9:"nine",0:"zero"}
+
+def numpad_action(pid, cids, hub_entity, dev_id):
+    """URC type:numpad — ein Action-Objekt für 1-9 + separater 0-Button.
+    Rendert identisch zum Original (mdi:numeric-X-circle-outline Icons, kein Text-Duplikat)."""
+    np = {"type":"numpad","name":f"{pid}_numpad",
+          "icon":"mdi:dialpad","tap_action":{"action":"key","key":"numpad"}}
+    acts = [np]
     for n in list(range(1,10)) + [0]:
         if str(n) in cids:
-            acts.append(btn(f"{pid}_num_{n}", str(n), hub_entity, dev_id, label=str(n)))
-    rows = []
-    for trio in [(1,2,3),(4,5,6),(7,8,9)]:
-        r = [f"{pid}_num_{n}" for n in trio if str(n) in cids]
-        if r: rows.append(r)
-    if "0" in cids: rows.append([f"{pid}_num_0"])
-    return rows, acts
+            np[_NUM_WORDS[n]] = {
+                "icon": f"mdi:numeric-{n}-circle-outline",
+                "tap_action": send(hub_entity, dev_id, str(n))
+            }
+    # Separater 0-Button für Platzierung außerhalb des 3×3-Grids
+    if "0" in cids:
+        acts.append({"type":"button","name":f"{pid}_num_0",
+                     "icon":"mdi:numeric-0-circle-outline","haptics":True,
+                     "tap_action":send(hub_entity,dev_id,"0")})
+    return acts  # [numpad_action, optional 0_button_action]
 
 def circlepad_action(pid, cids, hub_entity, dev_id, ok_cmd=None):
     """circlepad als URC-Action (type:circlepad)."""
@@ -202,18 +211,17 @@ def tmpl_smart_tv(pid, cids, hub_entity, dev_id, accent=None):
     if prow: rows.append(prow); rows.append(None)
     top=[f"{pid}_{n}" for c,n in [("Ambilight","ambilight"),("Home","home"),("SmartMenu","smart_menu")] if c in cids]
     if top: rows.append(top); rows.append(None)
-    # Numpad + Volume nebeneinander
-    nrows,nacts=numpad_rows(pid,cids,hub_entity,dev_id); acts+=nacts
+    # Numpad + Volume nebeneinander — URC type:numpad (kein Text-Duplikat)
+    has_num = any(str(n) in cids for n in range(10))
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
-    if nrows and vrow:
-        rows.append([nrows[0]+[f"{pid}_num_0" if "0" in cids else None], vrow])
-        # Letzte Zeile von numpad_rows ist [num_0] — wird oben schon hinzugefügt → überspringen
-        tail = nrows[1:]
-        if tail and tail[-1]==[f"{pid}_num_0"]: tail=tail[:-1]
-        for nr in tail: rows.append(nr)
+    if has_num:
+        acts += numpad_action(pid, cids, hub_entity, dev_id)
+        np_col = [f"{pid}_numpad"] + ([f"{pid}_num_0"] if "0" in cids else [])
+        if vrow:
+            rows.append([np_col, vrow])
+        else:
+            rows.append(np_col)
         rows.append(None)
-    elif nrows:
-        rows+=nrows; rows.append(None)
     elif vrow:
         rows.append(vrow); rows.append(None)
     # Info/Exit/Options
@@ -257,16 +265,17 @@ def tmpl_satellite(pid, cids, hub_entity, dev_id, accent=None):
     acts, rows = [], []
     prow=[f"{pid}_{n}" for c,n in [("PowerToggle","pwr"),("Home","home")] if c in cids]
     if prow: rows.append(prow); rows.append(None)
-    nrows,nacts=numpad_rows(pid,cids,hub_entity,dev_id); acts+=nacts
+    has_num = any(str(n) in cids for n in range(10))
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
-    if nrows and vrow:
-        rows.append([nrows[0]+[f"{pid}_num_0" if "0" in cids else None], vrow])
-        # Letzte Zeile von numpad_rows ist [num_0] — wird oben schon hinzugefügt → überspringen
-        tail = nrows[1:]
-        if tail and tail[-1]==[f"{pid}_num_0"]: tail=tail[:-1]
-        for nr in tail: rows.append(nr)
-    elif nrows: rows+=nrows
-    if vrow and not nrows: rows.append(vrow)
+    if has_num:
+        acts += numpad_action(pid, cids, hub_entity, dev_id)
+        np_col = [f"{pid}_numpad"] + ([f"{pid}_num_0"] if "0" in cids else [])
+        if vrow:
+            rows.append([np_col, vrow])
+        else:
+            rows.append(np_col)
+    elif vrow:
+        rows.append(vrow)
     rows.append(None)
     has_nav=all(c in cids for c in ("DirectionUp","DirectionLeft","DirectionRight","DirectionDown"))
     if has_nav:
