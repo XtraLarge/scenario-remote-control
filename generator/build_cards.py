@@ -344,7 +344,8 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
             "styles":card_styles("#ef4444")}
 
 def activity_conditions(device_id, model, hub):
-    """condition:template auf state_attr(current_activity) — kein extra Sensor, zuverlässiger als attribute-Conditions."""
+    """OR-Conditions direkt auf remote.current_activity — kein extra Sensor nötig.
+    Der echte Bug war bare null in URC-rows (jetzt [None]), nicht das Condition-Format."""
     hub_id=hub["id"]; hub_entity=hub["entity"]
     acts=[]
     for s in model["scenarios"]:
@@ -353,24 +354,23 @@ def activity_conditions(device_id, model, hub):
             act=(s.get("backend") or {}).get("harmony",{}).get("activity",s["name"])
             if act not in acts: acts.append(act)
     if not acts:
-        # Gerät in keiner Aktivität → zeige wenn hub "on"
-        tpl = f"{{{{ states('{hub_entity}') == 'on' }}}}"
-    else:
-        acts_str = ", ".join(f"\'{a}\'" for a in acts)
-        tpl = f"{{{{ state_attr('{hub_entity}', 'current_activity') in [{acts_str}] }}}}"
-    return [{"condition":"template","value_template": tpl}]
+        return [{"entity":hub_entity,"state":"on"}]
+    if len(acts)==1:
+        return [{"condition":"state","entity":hub_entity,
+                 "attribute":"current_activity","state":acts[0]}]
+    return [{"condition":"or","conditions":[
+        {"condition":"state","entity":hub_entity,
+         "attribute":"current_activity","state":a} for a in acts]}]
 
 def wrap_conditional(device, hub_id, card, model=None, hub=None):
-    """Wickelt eine FB-Karte in conditional. Nutzt visibility_sensor aus dem Modell (vorhanden und getestet)
-    wenn gesetzt; sonst activity_conditions Fallback. Kein Sensor → gibt card direkt zurück (immer sichtbar)."""
-    sensor = device.get("visibility_sensor")
-    if sensor:
-        # Vorhandener HA binary_sensor, simples {entity,state} — zuverlässigstes Format
-        conds = [{"entity": sensor, "state": "on"}]
-        return {"type": "conditional", "conditions": conds,
-                "card": {"type": "vertical-stack", "cards": [card]}}
-    # Kein Sensor gesetzt → Gerät immer sichtbar (z.B. Ventilator)
-    return card
+    """Wickelt FB-Karte in conditional mit OR-Conditions auf remote.current_activity.
+    Kein extra Sensor nötig — der Bug war bare null in URC-rows, nicht das Condition-Format."""
+    if model and hub:
+        conds = activity_conditions(device["id"], model, hub)
+    else:
+        conds = [{"entity": hub["entity"], "state": "on"}]
+    return {"type":"conditional","conditions":conds,
+            "card":{"type":"vertical-stack","cards":[card]}}
 
 def build_view(model, hub, overrides=None):
     hub_entity=hub["entity"]; hub_id=hub["id"]
