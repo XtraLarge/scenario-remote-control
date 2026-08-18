@@ -63,7 +63,7 @@ ICONS = {
     "Yellow":"mdi:alpha-y-circle","Blue":"mdi:alpha-b-circle",
     "InputHdmi1":"mdi:hdmi-port","InputHdmi2":"mdi:hdmi-port",
     "InputHdmi3":"mdi:hdmi-port","InputHdmi4":"mdi:hdmi-port",
-    **{str(n): f"mdi:numeric-{n}" for n in range(10)},
+    # Zahlen: kein Icon → text-only (verhindert Duplikat Icon+Label)
 }
 ICON_COLORS = {
     "Green":"color:green","Red":"color:red",
@@ -78,7 +78,8 @@ ICON_ONLY = {
     "Rewind","FastForward","SkipBack","SkipForward",
     "Green","Red","Yellow","Blue",
     "Back","Exit","Home",
-    "Ambilight",
+    "Ambilight","SmartMenu",
+    "Guide","Info","Subtitle","Teletext","List","Options","Apps",
 }
 SCENARIO_LABELS = {
     "sky":"Sky","firetv":"Fire TV","android":"Android TV","bluetooth":"Bluetooth",
@@ -206,7 +207,10 @@ def tmpl_smart_tv(pid, cids, hub_entity, dev_id, accent=None):
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
     if nrows and vrow:
         rows.append([nrows[0]+[f"{pid}_num_0" if "0" in cids else None], vrow])
-        for nr in nrows[1:]: rows.append(nr)
+        # Letzte Zeile von numpad_rows ist [num_0] — wird oben schon hinzugefügt → überspringen
+        tail = nrows[1:]
+        if tail and tail[-1]==[f"{pid}_num_0"]: tail=tail[:-1]
+        for nr in tail: rows.append(nr)
         rows.append(None)
     elif nrows:
         rows+=nrows; rows.append(None)
@@ -257,7 +261,10 @@ def tmpl_satellite(pid, cids, hub_entity, dev_id, accent=None):
     vrow,vacts=vol_row(pid,cids,hub_entity,dev_id); acts+=vacts
     if nrows and vrow:
         rows.append([nrows[0]+[f"{pid}_num_0" if "0" in cids else None], vrow])
-        for nr in nrows[1:]: rows.append(nr)
+        # Letzte Zeile von numpad_rows ist [num_0] — wird oben schon hinzugefügt → überspringen
+        tail = nrows[1:]
+        if tail and tail[-1]==[f"{pid}_num_0"]: tail=tail[:-1]
+        for nr in tail: rows.append(nr)
     elif nrows: rows+=nrows
     if vrow and not nrows: rows.append(vrow)
     rows.append(None)
