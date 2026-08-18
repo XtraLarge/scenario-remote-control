@@ -381,14 +381,14 @@ def build_view(model, hub, overrides=None):
 
     # Sections-View: Scenario oben (volle Breite), danach pro Gerät eine Section
     scenario_section={
-        "type":"grid","column_span":4,
+        "type":"grid","column_span":4,"columns":48,"rows":"auto",
         "cards":[build_scenario_card(model,hub,hub_entity,overrides)]
     }
     dev_sections=[]
     for did in seen:
         dev=dev_by_id[did]
         card=wrap_conditional(dev, hub_id, build_device_card(dev,hub,hub_entity), model=model, hub=hub)
-        dev_sections.append({"type":"grid","cards":[card]})
+        dev_sections.append({"type":"grid","columns":48,"rows":"auto","cards":[card]})
 
     return {"type":"sections","max_columns":4,
             "title":hub["name"],"path":f"fb-{hub_id}-gen",
