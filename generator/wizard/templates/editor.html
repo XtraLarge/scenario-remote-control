@@ -90,7 +90,7 @@
     .preview-card{background:#1c1c1e;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto}
     .preview-section{display:flex;flex-direction:column;gap:6px}
     .preview-sec-title{font-size:.68rem;color:#666;text-transform:uppercase;letter-spacing:.08em;padding:0 2px}
-    .preview-row{display:flex;gap:4px;align-items:stretch;width:100%}
+    .preview-row{display:grid;gap:3px;align-items:stretch;width:100%}
     .preview-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
       border-radius:8px;background:#2c2c2e;border:none;cursor:pointer;color:#e1e1e1;
       padding:8px 4px;min-height:44px;font-size:.72rem;transition:background .15s;width:100%}
@@ -123,6 +123,47 @@
     .toggle-view{display:flex;gap:0;border:1px solid #3d4156;border-radius:6px;overflow:hidden}
     .toggle-view button{background:#111318;color:#aaa;border:none;padding:5px 12px;cursor:pointer;font-size:.78rem}
     .toggle-view button.active{background:#2196f3;color:#fff}
+
+    /* Icon-Picker Modal */
+    #icon-picker-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.7);
+      z-index:9999; align-items:center; justify-content:center;
+    }
+    #icon-picker-overlay.open { display:flex; }
+    #icon-picker-box {
+      background:#1e2128; border:1px solid #3d4156; border-radius:10px;
+      width:520px; max-height:80vh; display:flex; flex-direction:column;
+      box-shadow:0 8px 40px rgba(0,0,0,.6);
+    }
+    #icon-picker-header {
+      padding:10px 14px; border-bottom:1px solid #2d3142;
+      display:flex; align-items:center; gap:8px;
+    }
+    #icon-picker-search {
+      flex:1; background:#111318; border:1px solid #3d4156; border-radius:6px;
+      color:#e1e1e1; padding:6px 10px; font-size:.85rem; outline:none;
+    }
+    #icon-picker-search:focus { border-color:#42a5f5; }
+    #icon-picker-grid {
+      display:grid; grid-template-columns:repeat(8,1fr); gap:4px;
+      overflow-y:auto; padding:10px; flex:1; min-height:0;
+    }
+    .icon-pick-item {
+      display:flex; flex-direction:column; align-items:center; gap:2px;
+      padding:6px 2px; border-radius:6px; cursor:pointer;
+      border:1px solid transparent; transition:background .1s, border-color .1s;
+    }
+    .icon-pick-item:hover  { background:#252c3a; border-color:#42a5f5; }
+    .icon-pick-item.sel    { background:#1a2a40; border-color:#90caf9; }
+    .icon-pick-item i      { font-size:1.4rem; color:#90caf9; }
+    .icon-pick-item span   { font-size:.55rem; color:#666; text-align:center;
+                             word-break:break-all; line-height:1.2; max-width:52px; }
+    #icon-picker-footer {
+      padding:8px 14px; border-top:1px solid #2d3142;
+      display:flex; gap:8px; align-items:center;
+    }
+    #icon-picker-selected-preview i { font-size:1.5rem; color:#90caf9; }
+    #icon-picker-selected-name { font-size:.78rem; color:#aaa; font-family:monospace; flex:1; }
   </style>
 </head>
 <body>
@@ -171,9 +212,23 @@
     <div class="props">
       <div class="panel-title">Eigenschaften</div>
       <div id="props-content" style="color:#444;font-size:.8rem">Element auswählen…</div>
+      <!-- Szenarien: Namen & Icons -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Szenarien</div>
+        <div id="scenario-list" style="display:flex;flex-direction:column;gap:4px"></div>
+        <button class="btn" onclick="saveScenarios()" style="margin-top:6px;width:100%;font-size:.8rem">💾 Szenarien speichern</button>
+        <div id="sce-status" style="font-size:.75rem;margin-top:4px"></div>
+      </div>
       <div class="deploy-bar">
-        <button class="btn btn-primary" onclick="saveAndDeploy()" style="width:100%">🚀 Speichern &amp; Deployen</button>
-        <div id="deploy-status" style="margin-top:6px;font-size:.78rem"></div>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <button class="btn btn-primary" onclick="saveLayout()" style="flex:1" id="btn-save" disabled title="Gerät wählen um zu speichern">💾 Speichern</button>
+          <button class="btn btn-primary" onclick="deployRoom()" style="flex:1">🚀 Deployen</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <button class="btn" onclick="exportFB()" style="flex:1" id="btn-export" disabled title="Gerät wählen">📤 Exportieren</button>
+          <button class="btn" onclick="importFB()" style="flex:1" title="FB-JSON importieren">📥 Importieren</button>
+        </div>
+        <div id="deploy-status" style="margin-top:4px;font-size:.78rem"></div>
       </div>
     </div>
   </div>
@@ -189,6 +244,8 @@ let selectedPath  = null;
 
 // ── Device laden: erst gespeichertes Layout, dann Smart-Template ──────────
 async function loadDevice(devId) {
+  document.getElementById('btn-save').disabled=false;
+  document.getElementById('btn-export').disabled=false;
   const opt = document.querySelector(`#device-sel option[value="${devId}"]`);
   if (!opt || !devId) return;
   // Gerätedaten aus MODEL lesen (data-* Attribute brechen bei JSON mit " in "-Attributen)
@@ -942,12 +999,34 @@ function renderPreview() {
       tl.textContent = sec.title; sd.appendChild(tl);
     }
     sec.rows.forEach(row => {
-      const rd = document.createElement('div'); rd.className='preview-row';
-      row.cells.forEach(cell => {
-        const cols = cell.props?.cols||1;
-        const el = previewCell(cell, cols, gc);
-        rd.appendChild(el);
+      migrateCols(row);
+      // Vorschau: exakt gleicher Renderpfad wie Editor (slotMap + CSS Grid)
+      const slotMap = {};
+      row.cells.forEach((cell) => {
+        const col  = Math.max(1, cell.props?.col  || 1);
+        const cols = Math.max(1, cell.props?.cols || 1);
+        slotMap[col] = {cell, cols};
       });
+
+      const rd = document.createElement('div'); rd.className='preview-row';
+      rd.style.cssText=`display:grid;grid-template-columns:repeat(${gc},1fr);grid-auto-rows:minmax(44px,auto);gap:3px;width:100%`;
+
+      let skipTo = 0;
+      for (let col = 1; col <= gc; col++) {
+        if (col <= skipTo) continue;
+        const entry = slotMap[col];
+        if (entry) {
+          const el = previewCell(entry.cell, entry.cols, gc);
+          el.style.gridColumn = `${col} / span ${entry.cols}`;
+          el.style.gridRow = '1';
+          rd.appendChild(el);
+          skipTo = col + entry.cols - 1;
+        } else {
+          const ph = document.createElement('div');
+          ph.style.cssText = `grid-column:${col};grid-row:1;min-height:44px`;
+          rd.appendChild(ph);
+        }
+      }
       sd.appendChild(rd);
     });
     card.appendChild(sd);
@@ -957,11 +1036,11 @@ function renderPreview() {
 
 function previewCell(cell, cols, gc) {
   const t = cell.type;
-  const span = Math.max(1, Math.round(cols));
+  const span = Math.max(1, cols); // gridColumn wird vom Aufrufer gesetzt
 
   if (t === 'spacer') {
     const el = document.createElement('div'); el.className='preview-spacer';
-    el.style.flex=span; return el;
+    return el;
   }
   if (t === 'circlepad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -972,7 +1051,7 @@ function previewCell(cell, cols, gc) {
       <button class="pdirBtn pleft"><i class="mdi mdi-chevron-left"></i></button>
       <button class="pdirBtn pright"><i class="mdi mdi-chevron-right"></i></button>
       <div class="pcenter"><i class="mdi mdi-circle" style="color:#fff;font-size:.8rem"></i></div>
-    </div>`; wrap.style.flex=span; return wrap;
+    </div>`; return wrap;
   }
   if (t === 'dpad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -982,13 +1061,13 @@ function previewCell(cell, cols, gc) {
       <div class="dc"><i class="mdi mdi-circle" style="font-size:.7rem"></i></div>
       <div class="dc"><i class="mdi mdi-chevron-right"></i></div>
       <div class="dc empty"></div><div class="dc"><i class="mdi mdi-chevron-down"></i></div><div class="dc empty"></div>
-    </div>`; wrap.style.flex=span; return wrap;
+    </div>`; return wrap;
   }
   if (t === 'numpad') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
     const nums = [1,2,3,4,5,6,7,8,9,'','0',''];
     wrap.innerHTML=`<div class="preview-numpad">${nums.map(n=>n===''?'<div class="pn" style="background:transparent"></div>':`<div class="pn">${n}</div>`).join('')}</div>`;
-    wrap.style.flex=span; return wrap;
+    return wrap;
   }
   if (t === 'volume') {
     const wrap = document.createElement('div'); wrap.style.cssText='display:flex;justify-content:center;padding:4px';
@@ -996,7 +1075,7 @@ function previewCell(cell, cols, gc) {
       <div class="pv"><i class="mdi mdi-volume-plus"></i></div>
       <div class="pv"><i class="mdi mdi-volume-mute"></i></div>
       <div class="pv"><i class="mdi mdi-volume-minus"></i></div>
-    </div>`; wrap.style.flex=span; return wrap;
+    </div>`; return wrap;
   }
   // button
   const ic   = cell.props?.icon || '';
@@ -1005,7 +1084,7 @@ function previewCell(cell, cols, gc) {
   const showIc  = ic  && disp !== 'text';
   const showLbl = lbl && disp !== 'icon';
   const el  = document.createElement('button'); el.className='preview-btn';
-  el.style.flex=span;
+  // gridColumn via Aufrufer gesetzt
   if(cell.props?.color)      el.style.color      = cell.props.color;
   if(cell.props?.background) el.style.background = cell.props.background;
   el.innerHTML = (showIc ? `<i class="mdi ${ic.replace('mdi:','mdi-')}"></i>` : '')
@@ -1015,25 +1094,212 @@ function previewCell(cell, cols, gc) {
 }
 
 // ── Save & Deploy ──────────────────────────────────────────────────────────
-async function saveAndDeploy(){
+// ── FB Export / Import ────────────────────────────────────────────────────
+function exportFB() {
+  if (!currentDevice) { alert('Kein Gerät gewählt.'); return; }
+  const payload = {
+    export_version: 1,
+    device_id:   currentDevice.id,
+    device_name: currentDevice.name,
+    sections:    sections,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fb_${currentDevice.id}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  document.getElementById('deploy-status').textContent = `✓ Exportiert: fb_${currentDevice.id}.json`;
+}
+
+function importFB() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.json,application/json';
+  inp.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        // Flexibles Format: { sections: [...] } oder direkt [...]
+        const secs = Array.isArray(data) ? data : data.sections;
+        if (!Array.isArray(secs)) { alert('Ungültiges Format: "sections" nicht gefunden.'); return; }
+        const srcName = data.device_name || data.device_id || file.name;
+        sections = secs;
+        renderCanvas();
+        selectedPath = null;
+        renderProps();
+        const status = document.getElementById('deploy-status');
+        status.textContent = `✓ Importiert von "${srcName}" — jetzt speichern/deployen.`;
+        status.style.color = '#4ade80';
+        setTimeout(() => { status.style.color = ''; }, 4000);
+      } catch(err) {
+        alert('Import-Fehler: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+async function saveLayout(){
   const layout=exportLayout();
   if(!layout){alert('Kein Gerät gewählt.');return;}
   const st=document.getElementById('deploy-status');
   st.innerHTML='<span class="status info"><span class="spinner"></span> Speichere…</span>';
-  const r1=await fetch('/api/save-layout',{method:'POST',headers:{'Content-Type':'application/json'},
+  const r=await fetch('/api/save-layout',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({room_id:ROOM_ID,device_id:currentDevice.id,sections,...layout})});
-  const d1=await r1.json();
-  if(!d1.ok){st.innerHTML=`<span class="status err">Fehler: ${d1.error||''}</span>`;return;}
-  document.getElementById('saved-indicator').style.display='inline-flex';
-  st.innerHTML='<span class="status info"><span class="spinner"></span> Deploye in HA…</span>';
-  const r2=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({room_id:ROOM_ID})});
-  const d2=await r2.json();
-  st.innerHTML=d2.ok?`<span class="status ok">✅ Deployed: ${d2.views_deployed?.join(', ')||'ok'}</span>`
-                    :`<span class="status err">❌ ${d2.error}</span>`;
+  const d=await r.json();
+  if(d.ok){
+    document.getElementById('saved-indicator').style.display='inline-flex';
+    st.innerHTML='<span class="status ok">✅ Layout gespeichert</span>';
+  } else {
+    st.innerHTML=`<span class="status err">❌ ${d.error||''}</span>`;
+  }
 }
 
-document.addEventListener('DOMContentLoaded', initPalette);
+async function deployRoom(){
+  const st=document.getElementById('deploy-status');
+  st.innerHTML='<span class="status info"><span class="spinner"></span> Deploye in HA…</span>';
+  const r=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({room_id:ROOM_ID})});
+  const d=await r.json();
+  st.innerHTML=d.ok?`<span class="status ok">✅ Deployed: ${d.views_deployed?.join(', ')||'ok'}</span>`
+                   :`<span class="status err">❌ ${d.error}</span>`;
+}
+
+// Compat-Alias
+async function saveAndDeploy(){ await saveLayout(); if(exportLayout()) await deployRoom(); }
+
+
+// ── Icon-Picker ────────────────────────────────────────────────────────────
+let _iconPickerCallback = null;
+let _iconPickerSelected = null;
+let _iconSearchTimer    = null;
+
+function openIconPicker(currentIcon, callback) {
+  _iconPickerCallback = callback;
+  _iconPickerSelected = currentIcon || null;
+  document.getElementById('icon-picker-overlay').classList.add('open');
+  const inp = document.getElementById('icon-picker-search');
+  inp.value = '';
+  iconPickerSearch('', currentIcon);
+  inp.focus();
+}
+function closeIconPicker() {
+  document.getElementById('icon-picker-overlay').classList.remove('open');
+  _iconPickerCallback = null;
+}
+function confirmIconPicker() {
+  if (_iconPickerSelected && _iconPickerCallback) {
+    _iconPickerCallback(_iconPickerSelected);
+  }
+  closeIconPicker();
+}
+function iconPickerSearch(q, preselect) {
+  clearTimeout(_iconSearchTimer);
+  _iconSearchTimer = setTimeout(async () => {
+    const n = q.trim() ? 9999 : 200;   // mit Suche: alle Treffer; ohne: Priority-Set
+    const icons = await fetch(`/api/mdi-search?q=${encodeURIComponent(q)}&n=${n}`).then(r=>r.json());
+    const grid = document.getElementById('icon-picker-grid');
+    grid.innerHTML = '';
+    // Trefferzahl in Footer schreiben
+    const countEl = document.getElementById('icon-picker-count');
+    if (countEl) countEl.textContent = q.trim()
+      ? `${icons.length} Treffer`
+      : `${icons.length} von 7000+ — Suche eingeben für alle`;
+
+    icons.forEach(ic => {
+      const cls = ic.replace('mdi:','mdi-');
+      const el = document.createElement('div');
+      el.className = 'icon-pick-item' + (ic === (preselect||_iconPickerSelected) ? ' sel' : '');
+      el.dataset.icon = ic;
+      el.innerHTML = `<i class="mdi ${cls}"></i><span>${ic.replace('mdi:','')}</span>`;
+      el.onclick = () => {
+        grid.querySelectorAll('.icon-pick-item').forEach(x=>x.classList.remove('sel'));
+        el.classList.add('sel');
+        _iconPickerSelected = ic;
+        document.getElementById('icon-picker-selected-preview').innerHTML =
+          `<i class="mdi ${cls}" style="font-size:1.5rem;color:#90caf9"></i>`;
+        document.getElementById('icon-picker-selected-name').textContent = ic;
+      };
+      grid.appendChild(el);
+    });
+    // Falls preselect nicht in den ersten 80 ist, trotzdem anzeigen
+    if (preselect && !icons.includes(preselect)) {
+      const cls = preselect.replace('mdi:','mdi-');
+      document.getElementById('icon-picker-selected-preview').innerHTML =
+        `<i class="mdi ${cls}" style="font-size:1.5rem;color:#90caf9"></i>`;
+      document.getElementById('icon-picker-selected-name').textContent = preselect;
+    }
+  }, 250);
+}
+
+// ── Szenarien ──────────────────────────────────────────────────────────────
+let _scenarios = [];
+async function loadScenarios() {
+  const r = await fetch(`/api/scenarios/${ROOM_ID}`);
+  _scenarios = await r.json();
+  const list = document.getElementById('scenario-list');
+  list.innerHTML = '';
+  _scenarios.forEach((s,i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:28px 1fr 1fr;gap:4px;align-items:center';
+    row.innerHTML = `
+      <i id="sce-icon-${i}" class="mdi ${(s.icon||'mdi:play-circle').replace('mdi:','mdi-')}"
+         style="color:#9c27b0;font-size:1.1rem;text-align:center;cursor:pointer"
+         title="${s.icon||'kein Icon'}"
+         onclick="openIconPicker(_scenarios[${i}].icon, v=>{ _scenarios[${i}].icon=v; document.getElementById('sce-icon-${i}').className='mdi '+v.replace('mdi:','mdi-'); document.getElementById('sce-icon-${i}').title=v; })"></i>
+      <input class="prop-input" style="font-size:.78rem" placeholder="${s.name}"
+             value="${s.label||''}"
+             oninput="_scenarios[${i}].label=this.value"
+             title="Anzeigename (leer = Kurzname)">
+      <button class="btn" style="font-size:.72rem;padding:2px 6px;white-space:nowrap"
+              onclick="openIconPicker(_scenarios[${i}].icon, v=>{ _scenarios[${i}].icon=v; document.getElementById('sce-icon-${i}').className='mdi '+v.replace('mdi:','mdi-'); document.getElementById('sce-icon-${i}').title=v; })">🎨 Symbol</button>
+    `;
+    list.appendChild(row);
+  });
+}
+async function saveScenarios() {
+  const st = document.getElementById('sce-status');
+  st.innerHTML = '<span class="status info">Speichere…</span>';
+  const r = await fetch(`/api/scenarios/${ROOM_ID}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(_scenarios)
+  });
+  const d = await r.json();
+  st.innerHTML = d.ok ? '<span class="status ok">✅ Gespeichert</span>'
+                      : `<span class="status err">❌ ${d.stderr}</span>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => { initPalette(); loadScenarios(); });
 </script>
+
+<!-- ── Icon-Picker Modal ──────────────────────────────────────────── -->
+<div id="icon-picker-overlay" onclick="if(event.target===this)closeIconPicker()">
+  <div id="icon-picker-box">
+    <div id="icon-picker-header">
+      <span style="font-size:.8rem;font-weight:600;color:#90caf9;white-space:nowrap">Symbol wählen</span>
+      <input id="icon-picker-search" type="search" placeholder="Suchen… z.B. television, remote, volume"
+             oninput="iconPickerSearch(this.value)">
+      <button onclick="closeIconPicker()" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div id="icon-picker-grid"></div>
+    <div id="icon-picker-footer" style="flex-wrap:wrap;gap:6px">
+      <div id="icon-picker-selected-preview"><i class="mdi mdi-play-circle"></i></div>
+      <div id="icon-picker-selected-name" style="flex:1">—</div>
+      <div id="icon-picker-count" style="font-size:.7rem;color:#555;align-self:center"></div>
+      <button class="btn btn-primary" style="font-size:.8rem;padding:5px 14px"
+              onclick="confirmIconPicker()">✓ Übernehmen</button>
+      <button class="btn" style="font-size:.8rem;padding:5px 10px"
+              onclick="closeIconPicker()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
