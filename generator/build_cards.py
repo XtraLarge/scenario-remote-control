@@ -335,8 +335,12 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
                  "tap_action":{"action":"perform-action","perform_action":"remote.turn_off",
                                "target":{"entity_id":hub_entity}}})
     refs.append("power_off")
+    # Aktivitäts-Buttons in Zeilen à max 4 aufteilen (verhindert Overflow)
+    COLS = 4
+    act_rows = [refs[i:i+COLS] for i in range(0, len(refs), COLS)]
+    all_rows = [["power_off"]] + act_rows
     return {"type":"custom:universal-remote-card","entity":hub_entity,
-            "rows":[["power_off"],refs],"custom_actions":acts,
+            "rows":all_rows,"custom_actions":acts,
             "styles":card_styles("#ef4444")}
 
 def activity_conditions(device_id, model, hub):
@@ -357,12 +361,16 @@ def activity_conditions(device_id, model, hub):
     return [{"condition":"template","value_template": tpl}]
 
 def wrap_conditional(device, hub_id, card, model=None, hub=None):
-    if model and hub:
-        conds=activity_conditions(device["id"], model, hub)
-    else:
-        conds=[{"entity":hub["entity"],"state":"on"}]
-    return {"type":"conditional","conditions":conds,
-            "card":{"type":"vertical-stack","cards":[card]}}
+    """Wickelt eine FB-Karte in conditional. Nutzt visibility_sensor aus dem Modell (vorhanden und getestet)
+    wenn gesetzt; sonst activity_conditions Fallback. Kein Sensor → gibt card direkt zurück (immer sichtbar)."""
+    sensor = device.get("visibility_sensor")
+    if sensor:
+        # Vorhandener HA binary_sensor, simples {entity,state} — zuverlässigstes Format
+        conds = [{"entity": sensor, "state": "on"}]
+        return {"type": "conditional", "conditions": conds,
+                "card": {"type": "vertical-stack", "cards": [card]}}
+    # Kein Sensor gesetzt → Gerät immer sichtbar (z.B. Ventilator)
+    return card
 
 def build_view(model, hub, overrides=None):
     hub_entity=hub["entity"]; hub_id=hub["id"]
