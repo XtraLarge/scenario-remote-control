@@ -44,9 +44,21 @@
     .step-badge { display:inline-block; background:#2196f3; color:#fff; font-size:.7rem;
       font-weight:600; padding:2px 7px; border-radius:10px; margin-right:6px; vertical-align:middle; }
     .room-id-hint { font-size:.72rem; color:#666; margin-top:3px; }
-    .activity-card { display:flex; flex-direction:column; gap:0; }
-    .act-meta { margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #2d3142; display:flex; flex-direction:column; gap:5px; }
-    .act-fb-label { font-size:.7rem; color:#555; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+    .activity-card { display:flex; flex-direction:column; gap:0; padding:0; overflow:hidden; }
+    .acc-header { display:flex; align-items:center; gap:8px; padding:9px 12px;
+      cursor:pointer; user-select:none; transition:background .15s; }
+    .acc-header:hover { background:rgba(255,255,255,.04); }
+    .acc-arrow { font-size:.65rem; color:#555; transition:transform .2s; flex-shrink:0; }
+    .acc-header.open .acc-arrow { transform:rotate(90deg); color:#90caf9; }
+    .acc-header i.acc-icon { font-size:1.1rem; color:#9c27b0; flex-shrink:0; }
+    .acc-title { font-size:.85rem; font-weight:600; color:#e1e1e1; flex:1; }
+    .acc-sublabel { font-size:.7rem; color:#666; font-style:italic; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; max-width:110px; }
+    .acc-body { display:none; padding:0 12px 10px; border-top:1px solid #1a1d24; }
+    .acc-body.open { display:block; }
+    .act-meta { margin:8px 0 10px; display:flex; flex-direction:column; gap:5px; }
+    .act-fb-label { font-size:.7rem; color:#555; font-weight:600;
+      text-transform:uppercase; letter-spacing:.06em; margin:6px 0 4px; }
     .act-meta-row { display:flex; align-items:center; gap:6px; }
     .act-meta-row label { font-size:.7rem; color:#777; width:90px; flex-shrink:0; }
     .act-meta-row input { flex:1; background:#111318; border:1px solid #2d3142; border-radius:4px;
@@ -263,13 +275,14 @@ function openActIconPicker(actName) {
   const safeId = actName.replace(/[^a-z0-9]/gi, '_');
   const curIcon = document.getElementById('act-icon-v-' + safeId)?.value || 'mdi:play-circle';
   openIconPicker(curIcon, (ic) => {
-    // Callback: icon in hidden-input + Preview aktualisieren
-    const inp = document.getElementById('act-icon-v-' + safeId);
-    const iEl = document.getElementById('act-icon-i-' + safeId);
-    const nEl = document.getElementById('act-icon-n-' + safeId);
-    if (inp) inp.value = ic;
-    if (iEl) iEl.className = 'mdi ' + ic.replace('mdi:', 'mdi-');
-    if (nEl) nEl.textContent = ic;
+    const inp  = document.getElementById('act-icon-v-' + safeId);
+    const iEl  = document.getElementById('act-icon-i-' + safeId);
+    const nEl  = document.getElementById('act-icon-n-' + safeId);
+    const hdrI = document.getElementById('act-hdr-icon-' + safeId);
+    if (inp)  inp.value = ic;
+    if (iEl)  iEl.className = 'mdi ' + ic.replace('mdi:', 'mdi-');
+    if (nEl)  nEl.textContent = ic;
+    if (hdrI) hdrI.className = 'mdi ' + ic.replace('mdi:', 'mdi-') + ' acc-icon';
   });
 }
 function openIconPicker(currentIcon, callback) {
@@ -476,48 +489,57 @@ function renderRoster() {
   const grid = document.getElementById('roster-grid');
   grid.innerHTML = '';
   for (const [actId, actName] of Object.entries(_activities)) {
-    const saved = _savedScenarios[actName] || {};
-    const safeId = actName.replace(/[^a-z0-9]/gi, '_');
+    const saved    = _savedScenarios[actName] || {};
+    const safeId   = actName.replace(/[^a-z0-9]/gi, '_');
+    const curIcon  = saved.icon  || 'mdi:play-circle';
+    const curLabel = saved.label || '';
+
     const card = document.createElement('div');
     card.className = 'activity-card';
-
-    // ── 1. Aktivitäts-Identität ──────────────────────────────────────
-    const metaHtml =
-      `<div class="act-name">▶ ${actName}</div>
-      <div class="act-meta">
-        <div class="act-meta-row">
-          <label>Anzeigename</label>
-          <input type="text" class="act-label-input"
-                 data-act="${actName}" data-slug="${(saved._slug||'').replace(/"/g,'&quot;')}"
-                 value="${(saved.label||'').replace(/"/g,'&quot;')}"
-                 placeholder="${actName}">
+    card.innerHTML =
+      `<div class="acc-header" onclick="toggleAcc(this)">
+        <span class="acc-arrow">&#9654;</span>
+        <i class="mdi ${curIcon.replace('mdi:','mdi-')} acc-icon" id="act-hdr-icon-${safeId}"></i>
+        <span class="acc-title">${actName}</span>
+        <span class="acc-sublabel" id="act-hdr-lbl-${safeId}">${curLabel}</span>
+      </div>
+      <div class="acc-body" id="acc-body-${safeId}">
+        <div class="act-meta">
+          <div class="act-meta-row">
+            <label>Anzeigename</label>
+            <input type="text" class="act-label-input"
+                   data-act="${actName}" data-slug="${(saved._slug||'').replace(/"/g,'&quot;')}"
+                   value="${curLabel.replace(/"/g,'&quot;')}"
+                   placeholder="${actName}"
+                   oninput="document.getElementById('act-hdr-lbl-${safeId}').textContent=this.value">
+          </div>
+          <div class="act-meta-row">
+            <label>Icon</label>
+            <button type="button" class="act-icon-btn" data-act="${actName}"
+                    onclick="openActIconPicker(this.dataset.act)">
+              <i class="mdi ${curIcon.replace('mdi:','mdi-')}" id="act-icon-i-${safeId}"></i>
+              <span id="act-icon-n-${safeId}">${curIcon}</span>
+            </button>
+            <input type="hidden" class="act-icon-input" data-act="${actName}"
+                   id="act-icon-v-${safeId}" value="${saved.icon||''}">
+          </div>
         </div>
-        <div class="act-meta-row">
-          <label>Icon</label>
-          <button type="button" class="act-icon-btn" data-act="${actName}"
-                  onclick="openActIconPicker(this.dataset.act)">
-            <i class="mdi ${((saved.icon||'mdi:play-circle').replace('mdi:','mdi-'))}"
-               id="act-icon-i-${safeId}"></i>
-            <span id="act-icon-n-${safeId}">${saved.icon||'mdi:play-circle'}</span>
-          </button>
-          <input type="hidden" class="act-icon-input" data-act="${actName}"
-                 id="act-icon-v-${safeId}" value="${saved.icon||''}">
-        </div>
+        <div class="act-fb-label">Fernbedienungen einblenden</div>
+        ${_devices.map(d =>
+          `<label class="device-row">
+            <input type="checkbox" class="roster-cb"
+                   data-act="${actId}" data-dev="${d.name}" checked>
+            <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
+          </label>`).join('')}
       </div>`;
-
-    // ── 2. FB-Auswahl ────────────────────────────────────────────────
-    const fbHtml =
-      `<div class="act-fb-label">Fernbedienungen einblenden</div>` +
-      _devices.map(d =>
-        `<label class="device-row">
-          <input type="checkbox" class="roster-cb"
-                 data-act="${actId}" data-dev="${d.name}" checked>
-          <span>${d.name} <small>(${d.cmd_count} Cmds)</small></span>
-        </label>`).join('');
-
-    card.innerHTML = metaHtml + fbHtml;
     grid.appendChild(card);
   }
+}
+
+function toggleAcc(hdr) {
+  hdr.classList.toggle('open');
+  const body = hdr.nextElementSibling;
+  if (body) body.classList.toggle('open');
 }
 
 // ── Generieren ────────────────────────────────────────────────────────────
