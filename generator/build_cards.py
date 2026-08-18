@@ -334,11 +334,8 @@ def build_scenario_card(model, hub, hub_entity, overrides=None):
                  "haptics":True,"icon_style":"color:red",
                  "tap_action":{"action":"perform-action","perform_action":"remote.turn_off",
                                "target":{"entity_id":hub_entity}}})
-    # Aktivitäts-Buttons in Zeilen à max 4 aufteilen (verhindert Overflow)
-    # power_off steht bereits in all_rows[0] – NICHT nochmal in refs anhängen
-    COLS = 4
-    act_rows = [refs[i:i+COLS] for i in range(0, len(refs), COLS)]
-    all_rows = [["power_off"]] + act_rows
+    # Alle Aktivitäten in EINER Zeile — Karte ist full-width (column_span:4), kein Zeilenumbruch
+    all_rows = [["power_off"], refs]
     return {"type":"custom:universal-remote-card","entity":hub_entity,
             "rows":all_rows,"custom_actions":acts,
             "styles":card_styles("#ef4444")}
