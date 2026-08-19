@@ -696,6 +696,8 @@ function renderCanvas() {
           el.title=cell.props?.label||cell.props?.command||cell.props?.name||cell.type; // Tooltip für lange Namen
           el.innerHTML=cellHtml(cell)+`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
           el.onclick=()=>selectCell(si,ri,ci);
+          // Doppelklick → Inline-Label-Editor (nur für Button-Typen)
+          if(cell.type==='button') el.ondblclick=e=>{ e.stopPropagation(); inlineLabelEdit(el, si, ri, ci); };
 
           el.draggable=true;
           el.addEventListener('dragstart', e=>{
@@ -808,13 +810,58 @@ function cellHtml(cell) {
   const ic=cell.props?.icon||'', lbl=cell.props?.label||cell.props?.command||'?';
   const disp=cell.props?.display||'both';
   const showIc=ic&&disp!=='text', showLbl=disp!=='icon';
-  if(showIc&&showLbl) return `<i class="cell-icon mdi ${ic.replace('mdi:','mdi-')}"></i><span class="cell-label">${esc(lbl)}</span>`;
+  const shortLbl=lbl.length>10?lbl.slice(0,9)+'…':lbl; // Kürzen für enge Zellen
+  const lblHtml=`<span class="cell-label" style="font-size:.62rem;line-height:1.1">${esc(shortLbl)}</span>`;
+  if(showIc&&showLbl) return `<i class="cell-icon mdi ${ic.replace('mdi:','mdi-')}" style="font-size:.9rem"></i>${lblHtml}`;
   if(showIc)          return `<i class="cell-icon mdi ${ic.replace('mdi:','mdi-')}"></i>`;
-  return `<span class="cell-label">${esc(lbl)}</span>`;
+  return lblHtml;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 
 // ── Properties-Panel ─────────────────────────────────────────────────────
+function inlineLabelEdit(el, si, ri, ci) {
+  const cell = sections[si]?.rows[ri]?.cells[ci];
+  if (!cell || cell.type !== 'button') return;
+  selectCell(si, ri, ci);
+  // Inline-Input über dem Element
+  const rect = el.getBoundingClientRect();
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = cell.props?.label || '';
+  inp.placeholder = cell.props?.command || 'Text…';
+  inp.style.cssText = [
+    'position:fixed',
+    `top:${rect.top + window.scrollY}px`,
+    `left:${rect.left}px`,
+    `width:${Math.max(rect.width, 80)}px`,
+    'z-index:9999',
+    'background:#1e2128',
+    'color:#e1e1e1',
+    'border:2px solid #2196f3',
+    'border-radius:5px',
+    'padding:2px 5px',
+    'font-size:.78rem',
+    'text-align:center',
+    'outline:none'
+  ].join(';');
+  document.body.appendChild(inp);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const val = inp.value.trim();
+    cell.props.label = val;
+    // Wenn kein Icon: auf 'text' wechseln; wenn Icon da: 'both'
+    if (!cell.props.icon) cell.props.display = 'text';
+    else cell.props.display = val ? 'both' : 'icon';
+    inp.remove();
+    renderCmdList(); renderCanvas(); renderProps();
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { inp.remove(); }
+  });
+  inp.addEventListener('blur', commit);
+}
+
 function renderProps() {
   const panel=document.getElementById('props-content');
   if(!selectedPath){panel.innerHTML='<span style="color:#444">Element auswählen…</span>';return;}
@@ -842,7 +889,7 @@ function renderProps() {
       <div class="prop-sep">Button</div>
       <div class="prop-group"><label class="prop-label">Command (Aktion)</label>
         <select class="prop-input" onchange="onCmdChange(this.value)">${cmdOpts}</select></div>
-      <div class="prop-group"><label class="prop-label">Label / Text</label>
+      <div class="prop-group"><label class="prop-label">Label / Text <span style="font-size:.65rem;color:#555;font-weight:400">(oder Doppelklick auf Zelle)</span></label>
         <input class="prop-input" type="text" value="${esc(cell.props?.label||'')}" oninput="setProp('label',this.value);renderCanvas()"></div>
       <div class="prop-group"><label class="prop-label">Icon (MDI)</label>
         <div class="icon-picker">
