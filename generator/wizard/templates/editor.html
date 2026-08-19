@@ -186,6 +186,7 @@
       <option value="{{ d.id }}">{{ d.name }}</option>
       {% endfor %}
     </select>
+    <label title="Akzentfarbe dieser Fernbedienung" style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:#888;cursor:pointer"><input type="color" id="dev-accent-picker" value="#2196f3" style="width:28px;height:28px;padding:0;border:none;border-radius:50%;cursor:pointer;background:none" onchange="onDevAccentChange(this.value)"><span style="white-space:nowrap">FB-Farbe</span></label>
     <span id="saved-indicator" style="display:none" class="saved-badge">✓ Layout gespeichert</span>
     <div class="col-ctrl"><label>Spalten:</label><input type="number" id="grid-cols" value="12" min="1" max="24" onchange="renderCanvas()"></div>
     <div class="toggle-view">
@@ -310,11 +311,14 @@ async function loadDevice(devId) {
   if (!opt || !devId) return;
   // Gerätedaten aus MODEL lesen (data-* Attribute brechen bei JSON mit " in "-Attributen)
   const modelDev = MODEL.devices.find(d => d.id === devId);
+  const devAccent = modelDev?.accent || '#2196f3';
+  document.getElementById('dev-accent-picker').value = devAccent;
   currentDevice = {
     id:      devId,
     name:    modelDev?.name || opt.textContent.trim(),
     cmds:    (modelDev?.commands || []).map(c => c.id),
     backend: modelDev?.backend || {},
+    accent:  devAccent,
   };
   document.getElementById('cur-dev-lbl').textContent = currentDevice.name;
   selectedPath = null;
@@ -329,6 +333,19 @@ async function loadDevice(devId) {
     document.getElementById('saved-indicator').style.display = 'none';
   }
   renderCmdList(); renderCanvas(); renderProps();
+}
+
+async function onDevAccentChange(color) {
+  if (!currentDevice) return;
+  currentDevice.accent = color;
+  // MODEL live updaten (für exportLayout)
+  const mdv = MODEL.devices.find(d => d.id === currentDevice.id);
+  if (mdv) mdv.accent = color;
+  // Sofort in model.json speichern
+  await fetch(`/api/device-accent/${ROOM_ID}/${currentDevice.id}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({accent: color})
+  });
 }
 
 async function loadSavedLayout(devId) {

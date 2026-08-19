@@ -114,18 +114,20 @@ def _css_glossy(cfg, accent):
         f"  border-radius:{br}px {br}px 0 0;\n"
         "  pointer-events:none;z-index:0;\n"
         "}\n"
-        # Buttons
+        # Buttons — groß genug für Touch-Bedienung
         "remote-button{\n"
-        "  background: rgba(255,255,255,0.038);\n"
+        "  --icon-size: 28px;\n"
+        "  background: rgba(255,255,255,0.05);\n"
         "  border-radius: 50%;\n"
+        "  padding: 10px;\n"
+        "  margin: 4px;\n"
         "  box-shadow:\n"
-        "    inset 0 1px 0 rgba(255,255,255,0.09),\n"
-        "    0 2px 6px rgba(0,0,0,0.45);\n"
-        "  margin: 3px;\n"
-        "  --icon-size: 22px;\n"
+        "    inset 0 1px 0 rgba(255,255,255,0.1),\n"
+        "    inset 0 -1px 0 rgba(0,0,0,0.25),\n"
+        "    0 3px 8px rgba(0,0,0,0.5);\n"
         "}\n"
-        # Rows zentriert
-        ".row{ justify-content:center; }\n"
+        # Rows zentriert, etwas mehr Zeilenabstand
+        ".row{ justify-content:center; gap:2px; }\n"
     )
 
 _PRESETS = {"gradient": _css_gradient, "flat": _css_flat,
@@ -448,7 +450,7 @@ def build_device_card(device, hub, hub_entity, style_config=None):
     bk=(device.get("backend") or {}).get(hub["backend"],{})
     dev_id=bk.get("device_id") or bk.get("device")
     dtype=detect_type(cmds)
-    accent=device.get("accent_color") or DEVICE_ACCENT.get(dtype,"#888")
+    accent=device.get("accent") or device.get("accent_color") or DEVICE_ACCENT.get(dtype,"#888")
     tmpl={"streaming":tmpl_streaming,"satellite":tmpl_satellite,
           "smart_tv":tmpl_smart_tv,"avr":tmpl_avr}.get(dtype,tmpl_fan)
     rows,acts=tmpl(pid,cids,hub_entity,dev_id,accent=accent)

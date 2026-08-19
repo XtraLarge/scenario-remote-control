@@ -480,6 +480,27 @@ def save_scenarios(room_id):
     return jsonify({"ok": r.returncode == 0, "stderr": r.stderr[:200]})
 
 
+
+@app.route("/api/device-accent/<room_id>/<device_id>", methods=["POST"])
+def api_set_device_accent(room_id, device_id):
+    """Accent-Farbe eines Geräts in model.json speichern."""
+    accent = (request.json or {}).get("accent", "#2196f3")
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    if not os.path.exists(model_path):
+        return jsonify({"ok": False, "error": "model not found"})
+    model = json.load(open(model_path, encoding="utf-8"))
+    found = False
+    for dev in model.get("devices", []):
+        if dev["id"] == device_id:
+            dev["accent"] = accent
+            found = True
+            break
+    if not found:
+        return jsonify({"ok": False, "error": "device not found"})
+    with open(model_path, "w", encoding="utf-8") as f:
+        json.dump(model, f, indent=2, ensure_ascii=False)
+    return jsonify({"ok": True})
+
 @app.route("/api/card-style/<room_id>", methods=["GET"])
 def api_get_card_style(room_id):
     """Style-Konfiguration für einen Raum laden."""
