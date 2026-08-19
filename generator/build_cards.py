@@ -34,6 +34,7 @@ def _css_gradient(cfg, accent):
         f":host ha-card{{\n  --accent: {accent};\n}}\n"
         ":host ha-card{\n"
         "  --bg:  var(--ha-card-background, var(--card-background-color, #1c1c1c));\n"
+        "  --frame-label-bg: var(--ha-card-background, var(--card-background-color, #1c1c1c));\n"
         "  --txt: var(--primary-text-color);\n"
         f"  --gw: {bw}px; --gr: {br}px;\n"
         "  --stroke: color-mix(in oklab, var(--txt) 65%, transparent);\n"
@@ -79,8 +80,56 @@ def _css_glass(cfg, accent):
         "}\n"
     )
 
+
+def _css_glossy(cfg, accent):
+    """Dark Glossy Remote — physische Fernbedienungs-Optik:
+    tiefer bläulich-dunkler Hintergrund, Licht-Highlight oben, Tiefe via Shadow."""
+    br = cfg.get("border_radius", 18)
+    pd = cfg.get("padding", 10)
+    return (
+        f":host ha-card{{\n  --accent: {accent};\n}}\n"
+        ":host ha-card{\n"
+        "  background: linear-gradient(\n"
+        "    180deg,\n"
+        f"    color-mix(in oklab, {accent} 20%, #111827),\n"
+        f"    color-mix(in oklab, {accent}  9%, #060a10)\n"
+        "  ) !important;\n"
+        f"  border-radius: {br}px;\n"
+        f"  padding: {pd}px;\n"
+        f"  border: 1px solid color-mix(in oklab, {accent} 22%, rgba(255,255,255,0.05));\n"
+        "  box-shadow:\n"
+        "    inset 0 1px 0 rgba(255,255,255,0.07),\n"
+        "    inset 0 -1px 0 rgba(0,0,0,0.3),\n"
+        "    0 4px 10px rgba(0,0,0,0.55),\n"
+        "    0 14px 36px rgba(0,0,0,0.45);\n"
+        "  position: relative;\n"
+        "  overflow: hidden;\n"
+        "}\n"
+        # Licht-Reflex oben
+        ":host ha-card::before{\n"
+        "  content:\'\';\n"
+        "  position:absolute;top:0;left:0;right:0;\n"
+        "  height:42%;\n"
+        "  background:linear-gradient(180deg,rgba(255,255,255,0.055),transparent);\n"
+        f"  border-radius:{br}px {br}px 0 0;\n"
+        "  pointer-events:none;z-index:0;\n"
+        "}\n"
+        # Buttons
+        "remote-button{\n"
+        "  background: rgba(255,255,255,0.038);\n"
+        "  border-radius: 50%;\n"
+        "  box-shadow:\n"
+        "    inset 0 1px 0 rgba(255,255,255,0.09),\n"
+        "    0 2px 6px rgba(0,0,0,0.45);\n"
+        "  margin: 3px;\n"
+        "  --icon-size: 22px;\n"
+        "}\n"
+        # Rows zentriert
+        ".row{ justify-content:center; }\n"
+    )
+
 _PRESETS = {"gradient": _css_gradient, "flat": _css_flat,
-            "minimal": _css_minimal, "glass": _css_glass}
+            "minimal": _css_minimal, "glass": _css_glass, "glossy": _css_glossy}
 
 def card_styles(accent="#888888", style_config=None):
     cfg = {**DEFAULT_STYLE, **(style_config or {})}
@@ -520,7 +569,8 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
                     e = fs.get("endRow", s)
                     title = fs.get("title", "")
                     legend = title.upper() if title else ""
-                    border_c = f"color-mix(in oklab,{accent} 60%,transparent)"
+                    border_c = f"color-mix(in oklab,{accent} 35%,var(--primary-text-color,#888))"
+                    label_c  = f"color-mix(in oklab,{accent} 55%,var(--primary-text-color,#ccc))"
                     # Erste Row der Section: oberer Rahmen + Titel als ::before
                     first_css = (
                         f"#row-{s}{{position:relative;border-top:1.5px solid {border_c};"
@@ -528,12 +578,12 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
                         f"border-radius:6px 6px 0 0;margin-top:6px;padding-top:4px;}}"
                     )
                     if legend:
-                        bg = "var(--ha-card-background,var(--card-background-color,#1c1c1c))"
+                        bg = "var(--frame-label-bg,var(--ha-card-background,var(--card-background-color,#1c1c1c)))"
                         first_css += (
                             f"#row-{s}::before{{content:\"{legend}\";position:absolute;"
-                            f"top:-0.6em;left:10px;background:{bg};padding:0 5px;"
-                            f"font-size:0.58rem;font-weight:700;text-transform:uppercase;"
-                            f"letter-spacing:0.08em;color:{accent};z-index:1;}}"
+                            f"top:-0.6em;left:10px;background:{bg};padding:0 6px;"
+                            f"font-size:0.68rem;font-weight:500;text-transform:uppercase;"
+                            f"letter-spacing:0.06em;color:{label_c};z-index:1;}}"
                         )
                     frame_css_parts.append(first_css)
                     # Mittlere Rows: nur linker + rechter Rahmen
