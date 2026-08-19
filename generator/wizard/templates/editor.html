@@ -1048,8 +1048,8 @@ function exportLayout(){
       if(!seen.has(lname)){seen.add(lname);
         acts.push({type:'button',name:lname,label:ltxt,haptics:false,
           tap_action:{action:'none'},
-          styles:':host{background:rgba(255,255,255,0.04);border-top:2px solid var(--accent-color);border-left:2px solid var(--accent-color);border-right:2px solid var(--accent-color);border-radius:6px 6px 0 0;min-height:22px;padding:2px 8px;box-sizing:border-box}'
-            +(ltxt?'.label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-color)}':'')});}
+          styles:':host{background:rgba(var(--rgb-accent-color,33,150,243),0.10);border-top:2px solid var(--accent-color);border-left:4px solid var(--accent-color);min-height:26px;padding:3px 10px;box-sizing:border-box}'
+            +(ltxt?'.label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-color);text-align:left;width:100%}':'')});}
       rows.push([lname]);
     }
     sec.rows.forEach(row=>{
@@ -1122,15 +1122,6 @@ function exportLayout(){
       });
       rows.push(rowRef);
     });
-    // Footer-Spacer: unterer Abschluss des Rahmens
-    if(sec.frame){
-      const lfname=`${dev.id}_frmft${si}`;
-      if(!seen.has(lfname)){seen.add(lfname);
-        acts.push({type:'button',name:lfname,label:'',haptics:false,
-          tap_action:{action:'none'},
-          styles:':host{border-bottom:2px solid var(--accent-color);border-left:2px solid var(--accent-color);border-right:2px solid var(--accent-color);border-radius:0 0 6px 6px;min-height:4px;background:rgba(255,255,255,0.02)}'});}
-      rows.push([lfname]);
-    }
   });
   return {rows,custom_actions:acts};
 }
