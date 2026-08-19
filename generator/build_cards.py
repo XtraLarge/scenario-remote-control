@@ -512,27 +512,34 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
                   "entity":hub_entity,"rows":rows,"custom_actions":acts,
                   "styles":card_styles(accent, style_config),
                   "grid_options":{"columns":"full","rows":"auto"}}
-            # Gerahmte Sub-Sections → eigene mini-URC-Cards mit card_mod fieldset
+            # Gerahmte Sub-Sections: zusammengeklebt mit Haupt-Card via card_mod + negativer Margin
             if framed:
+                # Haupt-Card bekommt keine untere Rundung (nahtloser Übergang)
+                card.setdefault("card_mod", {})["style"] = (
+                    "ha-card{border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;"
+                    "padding-bottom:4px!important;}"
+                )
                 sub_cards=[card]
-                for fs in framed:
+                is_last = lambda i: i == len(framed) - 1
+                for fi, fs in enumerate(framed):
                     title=fs.get("title","")
                     legend=title.upper() if title else ""
-                    # CSS als ein String — kein f-string-Mixing um }} Fehler zu vermeiden
+                    # Fieldset-Rahmen: nahtlos an Haupt-Card ankleben
+                    br_bottom = "12px" if is_last(fi) else "0"
                     legend_part = (
-                        f'ha-card::before{{content:"{legend}";position:absolute;top:-.65em;left:10px;'
-                        f'background:var(--ha-card-background,#1c1c1c);padding:0 6px;'
-                        f'font-size:.6rem;font-weight:700;text-transform:uppercase;'
-                        f'letter-spacing:.07em;color:{accent};z-index:1;}}'
+                        f'ha-card::before{{content:"{legend}";position:absolute;top:-.6em;left:12px;'
+                        f'background:var(--ha-card-background,var(--card-background-color,#1c1c1c));'
+                        f'padding:0 5px;font-size:.58rem;font-weight:700;text-transform:uppercase;'
+                        f'letter-spacing:.08em;color:{accent};z-index:2;}}'
                         if legend else ''
                     )
                     frame_css = (
-                        f'ha-card{{border:1.5px solid color-mix(in oklab,{accent} 60%,transparent)!important;'
-                        f'border-radius:8px!important;position:relative!important;'
-                        f'padding-top:6px;margin-top:4px;}}'
+                        f'ha-card{{border:1.5px solid color-mix(in oklab,{accent} 55%,transparent)!important;'
+                        f'border-radius:0 0 {br_bottom} {br_bottom}!important;'
+                        f'position:relative!important;margin-top:-2px!important;'
+                        f'padding:12px 4px 6px!important;}}'
                         + legend_part
                     )
-                    legend_css = legend_part  # Alias für Kompatibilität
                     mini={"type":"custom:universal-remote-card",
                           "entity":hub_entity,
                           "rows":_rows_from_layout(fs.get("rows",[])),
