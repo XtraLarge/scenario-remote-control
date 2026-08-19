@@ -518,21 +518,21 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
                 for fs in framed:
                     title=fs.get("title","")
                     legend=title.upper() if title else ""
-                    legend_css=(
-                        f'ha-card::before{{content:"{legend}";'
-                        'position:absolute;top:-.65em;left:10px;'
-                        f'background:var(--ha-card-background,#1c1c1c);'
-                        'padding:0 6px;font-size:.6rem;font-weight:700;'
-                        'text-transform:uppercase;letter-spacing:.07em;'
-                        f'color:{accent};z-index:1;}}'
+                    # CSS als ein String — kein f-string-Mixing um }} Fehler zu vermeiden
+                    legend_part = (
+                        f'ha-card::before{{content:"{legend}";position:absolute;top:-.65em;left:10px;'
+                        f'background:var(--ha-card-background,#1c1c1c);padding:0 6px;'
+                        f'font-size:.6rem;font-weight:700;text-transform:uppercase;'
+                        f'letter-spacing:.07em;color:{accent};z-index:1;}}'
                         if legend else ''
                     )
-                    frame_css=(
+                    frame_css = (
                         f'ha-card{{border:1.5px solid color-mix(in oklab,{accent} 60%,transparent)!important;'
-                        'border-radius:8px!important;position:relative!important;'
-                        'padding-top:6px;margin-top:4px;}}'
-                        + legend_css
+                        f'border-radius:8px!important;position:relative!important;'
+                        f'padding-top:6px;margin-top:4px;}}'
+                        + legend_part
                     )
+                    legend_css = legend_part  # Alias für Kompatibilität
                     mini={"type":"custom:universal-remote-card",
                           "entity":hub_entity,
                           "rows":_rows_from_layout(fs.get("rows",[])),
