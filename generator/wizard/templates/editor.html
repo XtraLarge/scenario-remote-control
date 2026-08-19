@@ -849,6 +849,17 @@ function renderProps() {
         </select></div>
       <div class="prop-group"><label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#aaa;cursor:pointer">
         <input type="checkbox" ${cell.props?.haptics?'checked':''} onchange="setProp('haptics',this.checked)">Haptics</label></div>
+      <div class="prop-sep">Aktionen</div>
+      <div class="prop-group"><label class="prop-label">Hold-Aktion</label>
+        <select class="prop-input" onchange="setProp('hold_action',this.value)">
+          <option value=""   ${!cell.props?.hold_action||cell.props?.hold_action===''?'selected':''}>— keine —</option>
+          <option value="repeat" ${cell.props?.hold_action==='repeat'?'selected':''}>Repeat (Dauerfeuer)</option>
+          <option value="more-info" ${cell.props?.hold_action==='more-info'?'selected':''}>More Info</option>
+        </select></div>
+      <div class="prop-group"><label class="prop-label">Double-Tap Command</label>
+        <select class="prop-input" onchange="setProp('double_tap_cmd',this.value)">
+          ${'<option value="">— kein —</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.double_tap_cmd===c?'selected':''}>${c}</option>`).join('')}
+        </select></div>
       <div class="prop-sep">Farben</div>
       <div style="display:flex;gap:8px">
         <div style="flex:1">
@@ -873,12 +884,26 @@ function renderProps() {
         </div>
       </div>`;
   }
-  const dirPairs=[['up','▲ Hoch'],['down','▼ Runter'],['left','◀ Links'],['right','▶ Rechts'],['ok','⭕ OK/Select']];
+  const dirPairs=[['up','▲ Hoch','mdi:chevron-up'],['down','▼ Runter','mdi:chevron-down'],['left','◀ Links','mdi:chevron-left'],['right','▶ Rechts','mdi:chevron-right'],['ok','⭕ OK/Select','']];
   if(['circlepad','dpad'].includes(cell.type)) {
-    html+=`<div class="prop-sep">Richtungs-Commands</div>`;
-    dirPairs.forEach(([k,lbl])=>{
+    html+=`<div class="prop-sep">Richtungen (${cell.type})</div>`;
+    dirPairs.forEach(([k,lbl,defIcon])=>{
       const o='<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.[k]===c?'selected':''}>${c}</option>`).join('');
-      html+=`<div class="prop-group"><label class="prop-label">${lbl}</label><select class="prop-input" onchange="setProp('${k}',this.value);renderCmdList()">${o}</select></div>`;
+      const curIcon=cell.props?.[k+'_icon']!==undefined?cell.props[k+'_icon']:(defIcon||'');
+      const holdChk=cell.props?.[k+'_hold']!==false;
+      html+=`<div class="prop-group" style="border-left:2px solid #2d3142;padding-left:6px;margin-bottom:8px">
+        <div style="font-size:.72rem;font-weight:700;color:#90caf9;margin-bottom:4px">${lbl}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div><label class="prop-label">Command</label>
+            <select class="prop-input" onchange="setProp('${k}',this.value);renderCmdList()">${o}</select></div>
+          <div><label class="prop-label">Icon (MDI)</label>
+            <input class="prop-input" type="text" placeholder="${defIcon||'mdi:...'}" value="${curIcon}"
+              oninput="setProp('${k}_icon',this.value);renderCanvas()"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;font-size:.73rem;color:#aaa;margin-top:3px;cursor:pointer">
+          <input type="checkbox" ${holdChk?'checked':''} onchange="setProp('${k}_hold',this.checked)"> Hold = Repeat
+        </label>
+      </div>`;
     });
   }
   if(cell.type==='volume') {
@@ -892,6 +917,49 @@ function renderProps() {
     html+=`<div class="prop-sep">Numpad</div>
       <div class="prop-group"><label class="prop-label">Command für 0</label>
       <select class="prop-input" onchange="setProp('zero',this.value)">${'<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.zero===c?'selected':''}>${c}</option>`).join('')}</select></div>`;
+  }
+
+  if(cell.type==='touchpad') {
+    const tpDirs=[['up','▲ Hoch','mdi:chevron-up'],['down','▼ Runter','mdi:chevron-down'],['left','◀ Links','mdi:chevron-left'],['right','▶ Rechts','mdi:chevron-right'],['center','⭕ Mitte','']];
+    html+=`<div class="prop-sep">Touchpad – Gesten</div>`;
+    tpDirs.forEach(([k,lbl,defIc])=>{
+      const o='<option value="">—</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.[k+'_cmd']===c?'selected':''}>${c}</option>`).join('');
+      const curIc=cell.props?.[k+'_icon']||defIc||'';
+      html+=`<div class="prop-group" style="border-left:2px solid #2d3142;padding-left:6px;margin-bottom:6px">
+        <div style="font-size:.72rem;font-weight:700;color:#90caf9;margin-bottom:3px">${lbl}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div><label class="prop-label">Command</label>
+            <select class="prop-input" onchange="setProp('${k}_cmd',this.value);renderCmdList()">${o}</select></div>
+          <div><label class="prop-label">Icon (MDI)</label>
+            <input class="prop-input" type="text" placeholder="${defIc||'mdi:...'}" value="${curIc}"
+              oninput="setProp('${k}_icon',this.value)"></div>
+        </div>
+      </div>`;
+    });
+  }
+
+  if(cell.type==='slider') {
+    const slCmdOpts='<option value="">— kein —</option>'+cmds.map(c=>`<option value="${c}" ${cell.props?.cmd===c?'selected':''}>${c}</option>`).join('');
+    html+=`<div class="prop-sep">Slider</div>
+      <div class="prop-group"><label class="prop-label">Entity (optional, für HA-Wert)</label>
+        <input class="prop-input" type="text" placeholder="media_player.xyz" value="${cell.props?.entity||''}"
+          oninput="setProp('entity',this.value)"></div>
+      <div class="prop-group"><label class="prop-label">Command (mit Wert-Template)</label>
+        <select class="prop-input" onchange="setProp('cmd',this.value);renderCmdList()">${slCmdOpts}</select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div class="prop-group"><label class="prop-label">Min</label>
+          <input class="prop-input" type="number" value="${cell.props?.min??0}"
+            oninput="setProp('min',+this.value)"></div>
+        <div class="prop-group"><label class="prop-label">Max</label>
+          <input class="prop-input" type="number" value="${cell.props?.max??100}"
+            oninput="setProp('max',+this.value)"></div>
+        <div class="prop-group"><label class="prop-label">Step</label>
+          <input class="prop-input" type="number" value="${cell.props?.step??1}"
+            oninput="setProp('step',+this.value)"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:.73rem;color:#aaa;cursor:pointer">
+        <input type="checkbox" ${cell.props?.vertical?'checked':''} onchange="setProp('vertical',this.checked)"> Vertikal
+      </label>`;
   }
 
   if(cell.type==='stack'){
@@ -1077,6 +1145,9 @@ function exportLayout(){
               if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
               if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
               if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+              if(cell.props.hold_action==='repeat') a.hold_action={action:'repeat'};
+              else if(cell.props.hold_action==='more-info') a.hold_action={action:'more-info'};
+              if(cell.props.double_tap_cmd) a.double_tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.double_tap_cmd}};
               const _sp=[];
               if(cell.props.color)      _sp.push(`.icon { color: ${cell.props.color}; }`);
               if(cell.props.background) _sp.push(`:host { background: ${cell.props.background}; }`);
@@ -1087,14 +1158,19 @@ function exportLayout(){
           if(['circlepad','dpad'].includes(cell.type)){
             const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
             if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
-              const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
+              const _defIcons=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
+              const mkDir=(cmd,dirKey)=>{
+                if(!cmd) return undefined;
+                const useHold=p[dirKey+'_hold']!==false;
+                const r={tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}}};
+                if(useHold) r.hold_action={action:'repeat'};
+                const ic=p[dirKey+'_icon']!==undefined?p[dirKey+'_icon']:(_defIcons[dirKey]||'');
+                if(ic) r.icon=ic;
+                return r;
+              };
               const a={type:cell.type,name:wn,haptics:true};
               if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-              // circlepad: immer Chevron-Icons auf Richtungstasten
-              const _di=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
-              const mkd=(cmd,ic)=>{const r=mk(cmd);if(r&&ic)r.icon=ic;return r;};
-              if(p.up) a.up=mkd(p.up,_di.up); if(p.down) a.down=mkd(p.down,_di.down);
-              if(p.left) a.left=mkd(p.left,_di.left); if(p.right) a.right=mkd(p.right,_di.right);
+              ['up','down','left','right'].forEach(d=>{const r=mkDir(p[d],d);if(r)a[d]=r;});
               acts.push(a);}
             return;
           }
@@ -1132,6 +1208,28 @@ function exportLayout(){
               }
             });
             rowRef.push(stackNames); return;
+          }
+          if(cell.type==='touchpad'){
+            const wn=`${dev.id}_touchpad`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const a={type:'touchpad',name:wn,haptics:true};
+              if(p.center_cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.center_cmd}};
+              ['up','down','left','right'].forEach(dir=>{
+                const cmd=p[dir+'_cmd'];if(!cmd)return;
+                const d={tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}};
+                const ic=p[dir+'_icon'];if(ic)d.icon=ic;
+                a[dir]=d;
+              });
+              acts.push(a);} return;
+          }
+          if(cell.type==='slider'){
+            const wn=`${dev.id}_slider`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const a={type:'slider',name:wn,range:[p.min??0,p.max??100],step:p.step??1};
+              if(p.vertical) a.vertical=true;
+              if(p.entity)   a.entity=p.entity;
+              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ value | int }}'}};
+              acts.push(a);} return;
           }
           rowRef.push(`${dev.id}_${cell.type}`);
         });
@@ -1152,6 +1250,9 @@ function exportLayout(){
               if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
               if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
               if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+              if(cell.props.hold_action==='repeat') a.hold_action={action:'repeat'};
+              else if(cell.props.hold_action==='more-info') a.hold_action={action:'more-info'};
+              if(cell.props.double_tap_cmd) a.double_tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.double_tap_cmd}};
               const _sp=[];
               if(cell.props.color)      _sp.push(`.icon { color: ${cell.props.color}; }`);
               if(cell.props.background) _sp.push(`:host { background: ${cell.props.background}; }`);
@@ -1162,14 +1263,19 @@ function exportLayout(){
           if(['circlepad','dpad'].includes(cell.type)){
             const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
             if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
-              const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
+              const _defIcons=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
+              const mkDir=(cmd,dirKey)=>{
+                if(!cmd) return undefined;
+                const useHold=p[dirKey+'_hold']!==false;
+                const r={tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}}};
+                if(useHold) r.hold_action={action:'repeat'};
+                const ic=p[dirKey+'_icon']!==undefined?p[dirKey+'_icon']:(_defIcons[dirKey]||'');
+                if(ic) r.icon=ic;
+                return r;
+              };
               const a={type:cell.type,name:wn,haptics:true};
               if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-              // circlepad: immer Chevron-Icons auf Richtungstasten
-              const _di=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
-              const mkd=(cmd,ic)=>{const r=mk(cmd);if(r&&ic)r.icon=ic;return r;};
-              if(p.up) a.up=mkd(p.up,_di.up); if(p.down) a.down=mkd(p.down,_di.down);
-              if(p.left) a.left=mkd(p.left,_di.left); if(p.right) a.right=mkd(p.right,_di.right);
+              ['up','down','left','right'].forEach(d=>{const r=mkDir(p[d],d);if(r)a[d]=r;});
               acts.push(a);}
             return;
           }
@@ -1207,6 +1313,28 @@ function exportLayout(){
               }
             });
             rowRef.push(stackNames); return;
+          }
+          if(cell.type==='touchpad'){
+            const wn=`${dev.id}_touchpad`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const a={type:'touchpad',name:wn,haptics:true};
+              if(p.center_cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.center_cmd}};
+              ['up','down','left','right'].forEach(dir=>{
+                const cmd=p[dir+'_cmd'];if(!cmd)return;
+                const d={tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}};
+                const ic=p[dir+'_icon'];if(ic)d.icon=ic;
+                a[dir]=d;
+              });
+              acts.push(a);} return;
+          }
+          if(cell.type==='slider'){
+            const wn=`${dev.id}_slider`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const a={type:'slider',name:wn,range:[p.min??0,p.max??100],step:p.step??1};
+              if(p.vertical) a.vertical=true;
+              if(p.entity)   a.entity=p.entity;
+              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ value | int }}'}};
+              acts.push(a);} return;
           }
           rowRef.push(`${dev.id}_${cell.type}`);
         });
