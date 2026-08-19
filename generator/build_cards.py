@@ -512,43 +512,49 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
                   "entity":hub_entity,"rows":rows,"custom_actions":acts,
                   "styles":card_styles(accent, style_config),
                   "grid_options":{"columns":"full","rows":"auto"}}
-            # Gerahmte Sub-Sections: zusammengeklebt mit Haupt-Card via card_mod + negativer Margin
+            # Gerahmte Sub-Sections: CSS via #row-N im URC styles-Feld (Shadow DOM Zugriff)
             if framed:
-                # Haupt-Card bekommt keine untere Rundung (nahtloser Übergang)
-                card.setdefault("card_mod", {})["style"] = (
-                    "ha-card{border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;"
-                    "padding-bottom:4px!important;}"
-                )
-                sub_cards=[card]
-                is_last = lambda i: i == len(framed) - 1
-                for fi, fs in enumerate(framed):
-                    title=fs.get("title","")
-                    legend=title.upper() if title else ""
-                    # Fieldset-Rahmen: nahtlos an Haupt-Card ankleben
-                    br_bottom = "12px" if is_last(fi) else "0"
-                    legend_part = (
-                        f'ha-card::before{{content:"{legend}";position:absolute;top:-.6em;left:12px;'
-                        f'background:var(--ha-card-background,var(--card-background-color,#1c1c1c));'
-                        f'padding:0 5px;font-size:.58rem;font-weight:700;text-transform:uppercase;'
-                        f'letter-spacing:.08em;color:{accent};z-index:2;}}'
-                        if legend else ''
+                frame_css_parts = []
+                for fs in framed:
+                    s = fs.get("startRow", 0)
+                    e = fs.get("endRow", s)
+                    title = fs.get("title", "")
+                    legend = title.upper() if title else ""
+                    border_c = f"color-mix(in oklab,{accent} 60%,transparent)"
+                    # Erste Row der Section: oberer Rahmen + Titel als ::before
+                    first_css = (
+                        f"#row-{s}{{position:relative;border-top:1.5px solid {border_c};"
+                        f"border-left:1.5px solid {border_c};border-right:1.5px solid {border_c};"
+                        f"border-radius:6px 6px 0 0;margin-top:6px;padding-top:4px;}}"
                     )
-                    frame_css = (
-                        f'ha-card{{border:1.5px solid color-mix(in oklab,{accent} 55%,transparent)!important;'
-                        f'border-radius:0 0 {br_bottom} {br_bottom}!important;'
-                        f'position:relative!important;margin-top:-2px!important;'
-                        f'padding:12px 4px 6px!important;}}'
-                        + legend_part
+                    if legend:
+                        bg = "var(--ha-card-background,var(--card-background-color,#1c1c1c))"
+                        first_css += (
+                            f"#row-{s}::before{{content:\"{legend}\";position:absolute;"
+                            f"top:-0.6em;left:10px;background:{bg};padding:0 5px;"
+                            f"font-size:0.58rem;font-weight:700;text-transform:uppercase;"
+                            f"letter-spacing:0.08em;color:{accent};z-index:1;}}"
+                        )
+                    frame_css_parts.append(first_css)
+                    # Mittlere Rows: nur linker + rechter Rahmen
+                    for r in range(s+1, e):
+                        frame_css_parts.append(
+                            f"#row-{r}{{border-left:1.5px solid {border_c};"
+                            f"border-right:1.5px solid {border_c};}}"
+                        )
+                    # Letzte Row: unterer Rahmen
+                    last_css = (
+                        f"#row-{e}{{border-left:1.5px solid {border_c};"
+                        f"border-right:1.5px solid {border_c};"
+                        f"border-bottom:1.5px solid {border_c};"
+                        f"border-radius:0 0 6px 6px;padding-bottom:4px;}}"
+                    ) if e > s else (
+                        # Nur eine Row: alle 4 Seiten
+                        f"#row-{s}{{border:1.5px solid {border_c};border-radius:6px;padding:6px;}}"
                     )
-                    mini={"type":"custom:universal-remote-card",
-                          "entity":hub_entity,
-                          "rows":_rows_from_layout(fs.get("rows",[])),
-                          "custom_actions":fs.get("custom_actions",[]),
-                          "styles":card_styles(accent, style_config),
-                          "grid_options":{"columns":"full","rows":"auto"},
-                          "card_mod":{"style":frame_css}}
-                    sub_cards.append(mini)
-                card={"type":"vertical-stack","cards":sub_cards}
+                    frame_css_parts.append(last_css)
+                extra_css = " ".join(frame_css_parts)
+                card["styles"] = card_styles(accent, style_config) + "\n" + extra_css
             print(f"  → {did}: Nutzer-Layout ({len(acts)} Actions, {len(framed)} framed)")
         else:
             card=build_device_card(dev,hub,hub_entity,style_config=style_config)

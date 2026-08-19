@@ -1041,80 +1041,154 @@ function exportLayout(){
   const devId=bk.device_id||bk.device, hubEnt=MODEL.hubs?.[0]?.entity||'';
   const rows=[], acts=[], seen=new Set();
   const framedSections=[];
+  let rowCounter=0; // URC zählt rows 1-basiert
   sections.forEach((sec,si)=>{
     if(sec.title && !sec.frame) rows.push(`##${sec.title}`);
-    const tRows=sec.frame?[]:rows;
-    const tActs=sec.frame?[]:acts;
-    sec.rows.forEach(row=>{
-      const rowRef=[];
-      row.cells.forEach(cell=>{
-        if(cell.type==='spacer'){rowRef.push(null);return;}
-        if(cell.type==='button'){
-          const name=cell.props.name||`${dev.id}_btn`; rowRef.push(name);
-          if(!seen.has(name)){seen.add(name);
-            const a={type:'button',name,haptics:!!cell.props.haptics};
-            const disp=cell.props.display||'both';
-            if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
-            if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
-            if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
-            const _styleParts=[];
-            if(cell.props.color)      _styleParts.push(`.icon { color: ${cell.props.color}; }`);
-            if(cell.props.background) _styleParts.push(`:host { background: ${cell.props.background}; }`);
-            if(_styleParts.length)    a.styles=_styleParts.join(' ');
-            tActs.push(a);}
-          return;
-        }
-        if(['circlepad','dpad'].includes(cell.type)){
-          const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
-          if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
-            const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
-            const a={type:cell.type,name:wn,haptics:true};
-            if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-            if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
-            if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
-            tActs.push(a);}
-          return;
-        }
-        if(cell.type==='numpad'){
-          rowRef.push('numpad');
-          for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);tActs.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
-          const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);tActs.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
-          return;
-        }
-        if(cell.type==='volume'){
-          const p=cell.props||{};
-          [['up','Vol +','mdi:volume-plus'],['mute','Mute','mdi:volume-mute'],['down','Vol -','mdi:volume-minus']].forEach(([k,lbl,ic])=>{
-            const nm=`${dev.id}_vol_${k}`;rowRef.push(nm);
-            if(!seen.has(nm)){seen.add(nm);tActs.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
-          });return;
-        }
-        if(cell.type==='stack'){
-          const stackNames=[];
-          (cell.cells||[]).forEach(sc=>{
-            if(sc.type==='spacer'){stackNames.push(null);return;}
-            if(sc.type==='button'){
-              const nm=sc.props?.name||`${dev.id}_stk`;
-              stackNames.push(nm);
-              if(!seen.has(nm)){seen.add(nm);
-                const a={type:'button',name:nm,haptics:!!sc.props?.haptics};
-                const dp=sc.props?.display||'both';
-                if(sc.props?.label&&dp!=='icon') a.label=sc.props.label;
-                if(sc.props?.icon &&dp!=='text') a.icon=sc.props.icon;
-                if(sc.props?.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:sc.props.command}};
-                const _sp=[];
-                if(sc.props?.color) _sp.push(`.icon { color: ${sc.props.color}; }`);
-                if(sc.props?.background) _sp.push(`:host { background: ${sc.props.background}; }`);
-                if(_sp.length) a.styles=_sp.join(' ');
-                tActs.push(a);}
-            }
-          });
-          rowRef.push(stackNames); return;
-        }
-        rowRef.push(`${dev.id}_${cell.type}`);
+    if(sec.frame){
+      const startRow=rowCounter+1;
+      sec.rows.forEach(row=>{
+        rowCounter++;
+        const rowRef=[];
+        row.cells.forEach(cell=>{
+          if(cell.type==='spacer'){rowRef.push(null);return;}
+          if(cell.type==='button'){
+            const name=cell.props.name||`${dev.id}_btn`; rowRef.push(name);
+            if(!seen.has(name)){seen.add(name);
+              const a={type:'button',name,haptics:!!cell.props.haptics};
+              const disp=cell.props.display||'both';
+              if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
+              if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
+              if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+              const _sp=[];
+              if(cell.props.color)      _sp.push(`.icon { color: ${cell.props.color}; }`);
+              if(cell.props.background) _sp.push(`:host { background: ${cell.props.background}; }`);
+              if(_sp.length)            a.styles=_sp.join(' ');
+              acts.push(a);}
+            return;
+          }
+          if(['circlepad','dpad'].includes(cell.type)){
+            const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
+              const a={type:cell.type,name:wn,haptics:true};
+              if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
+              if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
+              if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
+              acts.push(a);}
+            return;
+          }
+          if(cell.type==='numpad'){
+            rowRef.push('numpad');
+            for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
+            const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);acts.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
+            return;
+          }
+          if(cell.type==='volume'){
+            const p=cell.props||{};
+            [['up','Vol +','mdi:volume-plus'],['mute','Mute','mdi:volume-mute'],['down','Vol -','mdi:volume-minus']].forEach(([k,lbl,ic])=>{
+              const nm=`${dev.id}_vol_${k}`;rowRef.push(nm);
+              if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
+            });return;
+          }
+          if(cell.type==='stack'){
+            const stackNames=[];
+            (cell.cells||[]).forEach(sc=>{
+              if(sc.type==='spacer'){stackNames.push(null);return;}
+              if(sc.type==='button'){
+                const nm=sc.props?.name||`${dev.id}_stk`;
+                stackNames.push(nm);
+                if(!seen.has(nm)){seen.add(nm);
+                  const a={type:'button',name:nm,haptics:!!sc.props?.haptics};
+                  const dp=sc.props?.display||'both';
+                  if(sc.props?.label&&dp!=='icon') a.label=sc.props.label;
+                  if(sc.props?.icon &&dp!=='text') a.icon=sc.props.icon;
+                  if(sc.props?.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:sc.props.command}};
+                  const _sp=[];
+                  if(sc.props?.color) _sp.push(`.icon { color: ${sc.props.color}; }`);
+                  if(sc.props?.background) _sp.push(`:host { background: ${sc.props.background}; }`);
+                  if(_sp.length) a.styles=_sp.join(' ');
+                  acts.push(a);}
+              }
+            });
+            rowRef.push(stackNames); return;
+          }
+          rowRef.push(`${dev.id}_${cell.type}`);
+        });
+        rows.push(rowRef);
       });
-      tRows.push(rowRef);
-    });
-    if(sec.frame) framedSections.push({title:sec.title||'',rows:tRows,custom_actions:tActs});
+      framedSections.push({title:sec.title||'',startRow,endRow:rowCounter});
+    } else {
+      sec.rows.forEach(row=>{
+        rowCounter++;
+        const rowRef=[];
+        row.cells.forEach(cell=>{
+          if(cell.type==='spacer'){rowRef.push(null);return;}
+          if(cell.type==='button'){
+            const name=cell.props.name||`${dev.id}_btn`; rowRef.push(name);
+            if(!seen.has(name)){seen.add(name);
+              const a={type:'button',name,haptics:!!cell.props.haptics};
+              const disp=cell.props.display||'both';
+              if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
+              if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
+              if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
+              const _sp=[];
+              if(cell.props.color)      _sp.push(`.icon { color: ${cell.props.color}; }`);
+              if(cell.props.background) _sp.push(`:host { background: ${cell.props.background}; }`);
+              if(_sp.length)            a.styles=_sp.join(' ');
+              acts.push(a);}
+            return;
+          }
+          if(['circlepad','dpad'].includes(cell.type)){
+            const wn=`${dev.id}_${cell.type}`; rowRef.push(wn);
+            if(!seen.has(wn)){seen.add(wn);const p=cell.props||{};
+              const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
+              const a={type:cell.type,name:wn,haptics:true};
+              if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
+              if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
+              if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
+              acts.push(a);}
+            return;
+          }
+          if(cell.type==='numpad'){
+            rowRef.push('numpad');
+            for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
+            const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);acts.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
+            return;
+          }
+          if(cell.type==='volume'){
+            const p=cell.props||{};
+            [['up','Vol +','mdi:volume-plus'],['mute','Mute','mdi:volume-mute'],['down','Vol -','mdi:volume-minus']].forEach(([k,lbl,ic])=>{
+              const nm=`${dev.id}_vol_${k}`;rowRef.push(nm);
+              if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
+            });return;
+          }
+          if(cell.type==='stack'){
+            const stackNames=[];
+            (cell.cells||[]).forEach(sc=>{
+              if(sc.type==='spacer'){stackNames.push(null);return;}
+              if(sc.type==='button'){
+                const nm=sc.props?.name||`${dev.id}_stk`;
+                stackNames.push(nm);
+                if(!seen.has(nm)){seen.add(nm);
+                  const a={type:'button',name:nm,haptics:!!sc.props?.haptics};
+                  const dp=sc.props?.display||'both';
+                  if(sc.props?.label&&dp!=='icon') a.label=sc.props.label;
+                  if(sc.props?.icon &&dp!=='text') a.icon=sc.props.icon;
+                  if(sc.props?.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:sc.props.command}};
+                  const _sp=[];
+                  if(sc.props?.color) _sp.push(`.icon { color: ${sc.props.color}; }`);
+                  if(sc.props?.background) _sp.push(`:host { background: ${sc.props.background}; }`);
+                  if(_sp.length) a.styles=_sp.join(' ');
+                  acts.push(a);}
+              }
+            });
+            rowRef.push(stackNames); return;
+          }
+          rowRef.push(`${dev.id}_${cell.type}`);
+        });
+        rows.push(rowRef);
+      });
+    }
   });
   return {rows,custom_actions:acts,framed_sections:framedSections};
 }
