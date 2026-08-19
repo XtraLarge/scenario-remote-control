@@ -72,7 +72,7 @@
     .prop-group{margin-bottom:9px}
     .prop-sep{font-size:.68rem;color:#555;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-top:1px solid #2d3142;padding-top:8px;margin:10px 0 8px}
     .icon-picker{position:relative}
-    .icon-preview-btn{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#111318;border:1px solid #2d3142;border-radius:4px;cursor:pointer;width:100%;text-align:left}
+    .icon-preview-btn{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#111318;border:1px solid #2d3142;border-radius:4px;cursor:pointer;width:100%;text-align:left;color:inherit}
     .icon-preview-btn:hover{border-color:#90caf9}
     .icon-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1e2128;border:1px solid #3d4156;border-radius:8px;z-index:200;padding:10px;display:none;box-shadow:0 8px 32px rgba(0,0,0,.6)}
     .icon-dropdown.open{display:block}
@@ -575,8 +575,8 @@ function makeCell(type, col) {
   const id=currentDevice?.id||'dev';
   const c=col||1;
   if(type==='button')    return {type,props:{col:c,cols:1,name:`${id}_btn`,label:'Button',icon:'',command:'',haptics:true,display:'both'}};
-  if(type==='spacer')    if(type==='stack')    return {type:'stack',cells:[],props:{col:c,cols:1}};
-  return {type,props:{col:c,cols:1}};
+  if(type==='spacer')    return {type,props:{col:c,cols:1}};
+  if(type==='stack')     return {type,cells:[],props:{col:c,cols:1}};
   if(type==='circlepad') return {type,props:{col:c,cols:3,up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'OK'}};
   if(type==='dpad')      return {type,props:{col:c,cols:3,up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'Select'}};
   if(type==='numpad')    return {type,props:{col:c,cols:3,zero:'0'}};
@@ -893,13 +893,19 @@ function renderProps() {
         <input class="prop-input" type="text" value="${esc(cell.props?.label||'')}" oninput="setProp('label',this.value);renderCanvas()"></div>
       <div class="prop-group"><label class="prop-label">Icon (MDI)</label>
         <div class="icon-picker">
-          <button type="button" class="icon-preview-btn" onclick="toggleIconPicker()">
+          <div style="display:flex;gap:4px;align-items:stretch">
+            <button type="button" class="icon-preview-btn" onclick="toggleIconPicker()" style="flex:1">
+              ${cell.props?.icon
+                ? `<i class="mdi ${cell.props.icon.replace('mdi:','mdi-')}" id="icon-prev-i" style="font-size:1.1rem;color:#90caf9"></i>`
+                : `<i class="mdi mdi-image-off-outline" id="icon-prev-i" style="font-size:1.1rem;color:#444"></i>`}
+              <span style="font-size:.82rem;flex:1;color:${cell.props?.icon?'#e1e1e1':'#555'}" id="icon-prev-name">${cell.props?.icon||'— kein Icon —'}</span>
+              <span style="color:#555;font-size:.8rem">▾</span>
+            </button>
             ${cell.props?.icon
-              ? `<i class="mdi ${cell.props.icon.replace('mdi:','mdi-')}" id="icon-prev-i" style="font-size:1.1rem"></i>`
-              : `<i class="mdi mdi-image-off-outline" id="icon-prev-i" style="font-size:1.1rem;color:#444"></i>`}
-            <span style="font-size:.78rem;flex:1" id="icon-prev-name">${cell.props?.icon||'— kein Icon —'}</span>
-            <span style="color:#555">▾</span>
-          </button>
+              ? `<button type="button" title="Icon entfernen" onclick="setProp('icon','');setProp('display','text');renderCanvas();renderProps()"
+                  style="background:#1e2128;border:1px solid #2d3142;border-radius:4px;padding:4px 7px;cursor:pointer;color:#888;font-size:.85rem;line-height:1;flex-shrink:0" onmouseover="this.style.color='#f44336'" onmouseout="this.style.color='#888'">×</button>`
+              : ''}
+          </div>
           <div class="icon-dropdown" id="icon-dropdown">
             <input class="icon-search-inp" type="text" placeholder="Icon suchen… (z.B. power, home, play)"
                    oninput="searchIconsDebounced(this.value)" id="icon-search-input" autocomplete="off">
