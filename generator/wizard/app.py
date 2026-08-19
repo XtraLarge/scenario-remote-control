@@ -417,7 +417,8 @@ def api_save_layout():
     layout = {}
     if os.path.exists(layout_path):
         layout = json.load(open(layout_path, encoding="utf-8"))
-    layout[dev_id] = {"rows": rows, "custom_actions": actions}
+    framed = data.get("framed_sections", [])
+    layout[dev_id] = {"rows": rows, "custom_actions": actions, "framed_sections": framed}
     with open(layout_path, "w", encoding="utf-8") as f:
         json.dump(layout, f, indent=2, ensure_ascii=False)
 

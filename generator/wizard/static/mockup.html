@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remote UI – Mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#08090f;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;
+  display:flex;align-items:flex-start;justify-content:center;gap:16px;padding:24px;flex-wrap:wrap}
+
+/* ── Karte ── */
+.remote{
+  width:220px;background:linear-gradient(155deg,#161927 0%,#0d0f1a 60%,#111625 100%);
+  border-radius:20px;padding:14px 12px 18px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 32px rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;gap:0;
+}
+.remote-title{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.35);text-align:center;padding:4px 0 12px;
+}
+
+/* ── Button-Reihe ── */
+.row{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+.row.spread{justify-content:space-between}
+
+/* ── Basis-Button ── */
+.btn{
+  flex:1;min-width:0;aspect-ratio:1;max-width:48px;
+  background:linear-gradient(145deg,#1e2235,#13152200);
+  border:none;border-radius:10px;color:rgba(255,255,255,.75);cursor:pointer;
+  font-size:.8rem;display:flex;align-items:center;justify-content:center;
+  box-shadow:3px 3px 7px rgba(0,0,0,.5),-1px -1px 3px rgba(255,255,255,.04),
+             inset 0 1px 0 rgba(255,255,255,.06);
+  transition:all .12s ease;position:relative;overflow:hidden;
+}
+.btn::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(145deg,rgba(255,255,255,.06) 0%,transparent 55%);
+  border-radius:inherit;pointer-events:none;
+}
+.btn:hover{box-shadow:3px 3px 10px rgba(0,0,0,.6),-1px -1px 4px rgba(255,255,255,.06),
+            0 0 8px rgba(33,150,243,.2),inset 0 1px 0 rgba(255,255,255,.08);
+  color:#fff;transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.96);box-shadow:1px 1px 4px rgba(0,0,0,.5),inset 0 2px 4px rgba(0,0,0,.3)}
+.btn i{font-size:1.1rem;pointer-events:none}
+.btn .lbl{font-size:.58rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;pointer-events:none}
+
+/* ── Power-Button ── */
+.btn.pwr{background:linear-gradient(145deg,#2a1015,#18090d);
+  box-shadow:3px 3px 7px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,60,60,.08)}
+.btn.pwr i{color:rgba(220,60,60,.7)}
+.btn.pwr:hover i{color:#ff4444;filter:drop-shadow(0 0 5px rgba(255,68,68,.6))}
+
+/* ── Spacer ── */
+.spacer{flex:1;max-width:48px}
+
+/* ── D-Pad ── */
+.dpad-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:4px auto;width:134px}
+.dpad-wrap .btn{aspect-ratio:1;max-width:none;border-radius:8px}
+.dpad-wrap .btn.center{background:linear-gradient(145deg,#1a1d30,#0f1120);
+  border-radius:50%;aspect-ratio:1;font-size:.65rem;font-weight:700;letter-spacing:.05em;color:rgba(255,255,255,.5)}
+.dpad-wrap .btn i{font-size:.95rem}
+.empty{background:none!important;box-shadow:none!important;pointer-events:none}
+
+/* ── Divider ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);margin:6px 0}
+
+/* ── Fieldset-Section (Quellen) ── */
+.frame-section{
+  position:relative;
+  border:1.5px solid rgba(33,150,243,.45);
+  border-radius:10px;
+  padding:14px 8px 10px;
+  margin:10px 0 4px;
+}
+.frame-section .frame-title{
+  position:absolute;
+  top:-.65em;left:10px;
+  background:#0d0f1a; /* gleicher Hintergrund wie .remote */
+  padding:0 6px;
+  font-size:.6rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:rgba(33,150,243,.85);
+  white-space:nowrap;
+}
+.frame-section .row{margin-bottom:0}
+.frame-section .btn{border-radius:8px;font-size:.68rem}
+
+/* ── HDMI Label ── */
+.btn .hdmi-icon{font-size:.75rem;display:block;margin-bottom:2px}
+.btn .hdmi-lbl{font-size:.5rem;font-weight:700;letter-spacing:.05em;color:rgba(255,255,255,.4)}
+
+/* ── Szenario-Strip oben ── */
+.scenario-strip{
+  background:linear-gradient(135deg,#2a1515,#1a0c0c);
+  border-radius:16px;padding:12px 14px;margin-bottom:4px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.05),0 4px 16px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;align-items:center;gap:8px;width:100%
+}
+.scenario-strip .s-row{display:flex;gap:10px;align-items:flex-end}
+.s-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;opacity:.5;transition:.15s}
+.s-item.active{opacity:1}
+.s-item i{font-size:1.3rem;color:rgba(255,255,255,.85)}
+.s-item.active i{color:#f97316;filter:drop-shadow(0 0 6px rgba(249,115,22,.5))}
+.s-item span{font-size:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5)}
+.s-item.active span{color:rgba(249,115,22,.85)}
+.s-off{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.s-off i{font-size:1.5rem;color:rgba(220,60,60,.5)}
+.s-off span{font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(220,60,60,.4)}
+</style>
+</head>
+<body>
+
+<!-- Szenario-Strip -->
+<div class="scenario-strip">
+  <div class="s-off"><i class="mdi mdi-power"></i><span>Aus</span></div>
+  <div class="s-row">
+    <div class="s-item active"><i class="mdi mdi-satellite-variant"></i><span>Sky</span></div>
+    <div class="s-item"><i class="mdi mdi-fire"></i><span>Fire TV</span></div>
+    <div class="s-item"><i class="mdi mdi-android"></i><span>Android</span></div>
+    <div class="s-item"><i class="mdi mdi-bluetooth"></i><span>BT</span></div>
+    <div class="s-item"><i class="mdi mdi-radio"></i><span>Radio</span></div>
+    <div class="s-item"><i class="mdi mdi-sony-playstation"></i><span>PS</span></div>
+  </div>
+</div>
+
+<!-- Philips Fernseher -->
+<div class="remote">
+  <div class="remote-title">Philips-Fernseher</div>
+  <div class="row">
+    <button class="btn pwr"><i class="mdi mdi-power"></i></button>
+    <div class="spacer"></div>
+    <button class="btn"><i class="mdi mdi-checkbox-blank-circle-outline"></i></button>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-home"></i></button>
+    <button class="btn"><i class="mdi mdi-star-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-view-grid-outline"></i></button>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-numeric-1-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-2-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-3-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-volume-high"></i></button>
+  </div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-numeric-4-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-5-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-6-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-volume-mute"></i></button>
+  </div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-numeric-7-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-8-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-numeric-9-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-volume-medium"></i></button>
+  </div>
+  <div class="row">
+    <div class="spacer"></div>
+    <button class="btn"><i class="mdi mdi-numeric-0-circle-outline"></i></button>
+    <div class="spacer"></div>
+    <div class="spacer"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="dpad-wrap">
+    <div class="empty"></div>
+    <button class="btn"><i class="mdi mdi-chevron-up"></i></button>
+    <button class="btn"><div class="lbl">CH+</div></button>
+    <button class="btn"><i class="mdi mdi-chevron-left"></i></button>
+    <button class="btn center"><div class="lbl">OK</div></button>
+    <button class="btn"><i class="mdi mdi-chevron-right"></i></button>
+    <button class="btn"><i class="mdi mdi-undo-variant"></i></button>
+    <button class="btn"><i class="mdi mdi-chevron-down"></i></button>
+    <button class="btn"><div class="lbl">CH-</div></button>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-rewind"></i></button>
+    <button class="btn"><i class="mdi mdi-stop-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-play-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-fast-forward"></i></button>
+  </div>
+  <div class="row">
+    <button class="btn" style="background:linear-gradient(145deg,#1a0f0a,#110a06)"><i class="mdi mdi-alpha-r-circle" style="color:rgba(220,50,50,.7)"></i></button>
+    <button class="btn" style="background:linear-gradient(145deg,#0a1a0a,#060f06)"><i class="mdi mdi-alpha-g-circle" style="color:rgba(50,180,50,.7)"></i></button>
+    <button class="btn" style="background:linear-gradient(145deg,#0a0a1a,#06060f)"><i class="mdi mdi-alpha-b-circle" style="color:rgba(50,100,220,.7)"></i></button>
+    <button class="btn" style="background:linear-gradient(145deg,#1a1a0a,#0f0f06)"><i class="mdi mdi-alpha-y-circle" style="color:rgba(220,200,50,.7)"></i></button>
+  </div>
+</div>
+
+<!-- Yamaha AV-Receiver -->
+<div class="remote">
+  <div class="remote-title">Yamaha-AV-Receiver</div>
+  <div class="row">
+    <button class="btn pwr"><i class="mdi mdi-power"></i></button>
+    <div class="spacer"></div>
+    <button class="btn"><i class="mdi mdi-circle-outline"></i></button>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-volume-high"></i></button>
+    <button class="btn"><i class="mdi mdi-volume-mute"></i></button>
+    <button class="btn"><i class="mdi mdi-volume-medium"></i></button>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-rewind"></i></button>
+    <button class="btn"><i class="mdi mdi-play-circle-outline"></i></button>
+    <button class="btn"><i class="mdi mdi-fast-forward"></i></button>
+  </div>
+  <div class="row">
+    <button class="btn"><i class="mdi mdi-stop-circle-outline"></i></button>
+    <div class="spacer"></div>
+    <button class="btn"><i class="mdi mdi-pause-circle-outline"></i></button>
+  </div>
+  <div class="divider"></div>
+
+  <!-- ── Fieldset: Quellen ── -->
+  <div class="frame-section">
+    <span class="frame-title">Quellen</span>
+    <div class="row">
+      <button class="btn" style="flex-direction:column;gap:1px">
+        <i class="mdi mdi-hdmi-port hdmi-icon"></i>
+        <span class="hdmi-lbl">HDMI 1</span>
+      </button>
+      <button class="btn" style="flex-direction:column;gap:1px">
+        <i class="mdi mdi-hdmi-port hdmi-icon"></i>
+        <span class="hdmi-lbl">HDMI 2</span>
+      </button>
+      <button class="btn" style="flex-direction:column;gap:1px">
+        <i class="mdi mdi-hdmi-port hdmi-icon"></i>
+        <span class="hdmi-lbl">HDMI 3</span>
+      </button>
+      <button class="btn" style="flex-direction:column;gap:1px">
+        <i class="mdi mdi-hdmi-port hdmi-icon"></i>
+        <span class="hdmi-lbl">HDMI 4</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

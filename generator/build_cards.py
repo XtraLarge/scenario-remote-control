@@ -506,11 +506,43 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
             lv=layout[did]
             rows=_rows_from_layout(lv.get("rows",[]))
             acts=lv.get("custom_actions",[])
+            framed=lv.get("framed_sections",[]) or []
+            # Haupt-Card
             card={"type":"custom:universal-remote-card","title":dev["name"],
                   "entity":hub_entity,"rows":rows,"custom_actions":acts,
                   "styles":card_styles(accent, style_config),
                   "grid_options":{"columns":"full","rows":"auto"}}
-            print(f"  → {did}: Nutzer-Layout ({len(acts)} Actions)")
+            # Gerahmte Sub-Sections → eigene mini-URC-Cards mit card_mod fieldset
+            if framed:
+                sub_cards=[card]
+                for fs in framed:
+                    title=fs.get("title","")
+                    legend=title.upper() if title else ""
+                    legend_css=(
+                        f'ha-card::before{{content:"{legend}";'
+                        'position:absolute;top:-.65em;left:10px;'
+                        f'background:var(--ha-card-background,#1c1c1c);'
+                        'padding:0 6px;font-size:.6rem;font-weight:700;'
+                        'text-transform:uppercase;letter-spacing:.07em;'
+                        f'color:{accent};z-index:1;}}'
+                        if legend else ''
+                    )
+                    frame_css=(
+                        f'ha-card{{border:1.5px solid color-mix(in oklab,{accent} 60%,transparent)!important;'
+                        'border-radius:8px!important;position:relative!important;'
+                        'padding-top:6px;margin-top:4px;}}'
+                        + legend_css
+                    )
+                    mini={"type":"custom:universal-remote-card",
+                          "entity":hub_entity,
+                          "rows":_rows_from_layout(fs.get("rows",[])),
+                          "custom_actions":fs.get("custom_actions",[]),
+                          "styles":card_styles(accent, style_config),
+                          "grid_options":{"columns":"full","rows":"auto"},
+                          "card_mod":{"style":frame_css}}
+                    sub_cards.append(mini)
+                card={"type":"vertical-stack","cards":sub_cards}
+            print(f"  → {did}: Nutzer-Layout ({len(acts)} Actions, {len(framed)} framed)")
         else:
             card=build_device_card(dev,hub,hub_entity,style_config=style_config)
             print(f"  → {did}: Smart-Template")

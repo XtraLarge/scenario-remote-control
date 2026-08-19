@@ -1040,18 +1040,11 @@ function exportLayout(){
   const dev=currentDevice, bk=dev.backend?.harmony||{};
   const devId=bk.device_id||bk.device, hubEnt=MODEL.hubs?.[0]?.entity||'';
   const rows=[], acts=[], seen=new Set();
+  const framedSections=[];
   sections.forEach((sec,si)=>{
-    if(sec.title) rows.push(`##${sec.title}`);
-    if(sec.frame){
-      const lname=`${dev.id}_frm${si}`;
-      const ltxt=(sec.showTitle&&sec.title)?sec.title:'';
-      if(!seen.has(lname)){seen.add(lname);
-        acts.push({type:'button',name:lname,label:ltxt,haptics:false,
-          tap_action:{action:'none'},
-          styles:':host{background:rgba(var(--rgb-accent-color,33,150,243),0.10);border-top:2px solid var(--accent-color);border-left:4px solid var(--accent-color);min-height:26px;padding:3px 10px;box-sizing:border-box}'
-            +(ltxt?'.label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-color);text-align:left;width:100%}':'')});}
-      rows.push([lname]);
-    }
+    if(sec.title && !sec.frame) rows.push(`##${sec.title}`);
+    const tRows=sec.frame?[]:rows;
+    const tActs=sec.frame?[]:acts;
     sec.rows.forEach(row=>{
       const rowRef=[];
       row.cells.forEach(cell=>{
@@ -1064,12 +1057,11 @@ function exportLayout(){
             if(cell.props.label && disp!=='icon')  a.label=cell.props.label;
             if(cell.props.icon  && disp!=='text')  a.icon=cell.props.icon;
             if(cell.props.command) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props.command}};
-            // Farben → URC styles CSS-String
             const _styleParts=[];
             if(cell.props.color)      _styleParts.push(`.icon { color: ${cell.props.color}; }`);
             if(cell.props.background) _styleParts.push(`:host { background: ${cell.props.background}; }`);
             if(_styleParts.length)    a.styles=_styleParts.join(' ');
-            acts.push(a);}
+            tActs.push(a);}
           return;
         }
         if(['circlepad','dpad'].includes(cell.type)){
@@ -1080,20 +1072,20 @@ function exportLayout(){
             if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
             if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
             if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
-            acts.push(a);}
+            tActs.push(a);}
           return;
         }
         if(cell.type==='numpad'){
           rowRef.push('numpad');
-          for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
-          const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);acts.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
+          for(let n=1;n<=9;n++){const nm=`${dev.id}_num${n}`;if(!seen.has(nm)){seen.add(nm);tActs.push({type:'button',name:nm,icon:`mdi:numeric-${n}`,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:String(n)}}});}}
+          const nm0=`${dev.id}_num0`;if(!seen.has(nm0)){seen.add(nm0);tActs.push({type:'button',name:nm0,icon:'mdi:numeric-0',haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cell.props?.zero||'0'}}});}
           return;
         }
         if(cell.type==='volume'){
           const p=cell.props||{};
           [['up','Vol +','mdi:volume-plus'],['mute','Mute','mdi:volume-mute'],['down','Vol -','mdi:volume-minus']].forEach(([k,lbl,ic])=>{
             const nm=`${dev.id}_vol_${k}`;rowRef.push(nm);
-            if(!seen.has(nm)){seen.add(nm);acts.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
+            if(!seen.has(nm)){seen.add(nm);tActs.push({type:'button',name:nm,label:lbl,icon:ic,haptics:true,tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p[k]||''}}});}
           });return;
         }
         if(cell.type==='stack'){
@@ -1113,17 +1105,18 @@ function exportLayout(){
                 if(sc.props?.color) _sp.push(`.icon { color: ${sc.props.color}; }`);
                 if(sc.props?.background) _sp.push(`:host { background: ${sc.props.background}; }`);
                 if(_sp.length) a.styles=_sp.join(' ');
-                acts.push(a);}
+                tActs.push(a);}
             }
           });
           rowRef.push(stackNames); return;
         }
         rowRef.push(`${dev.id}_${cell.type}`);
       });
-      rows.push(rowRef);
+      tRows.push(rowRef);
     });
+    if(sec.frame) framedSections.push({title:sec.title||'',rows:tRows,custom_actions:tActs});
   });
-  return {rows,custom_actions:acts};
+  return {rows,custom_actions:acts,framed_sections:framedSections};
 }
 
 
