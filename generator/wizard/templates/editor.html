@@ -894,8 +894,10 @@ function renderProps() {
       <div class="prop-group"><label class="prop-label">Icon (MDI)</label>
         <div class="icon-picker">
           <button type="button" class="icon-preview-btn" onclick="toggleIconPicker()">
-            <i class="mdi ${(cell.props?.icon||'mdi:remote').replace('mdi:','mdi-')}" id="icon-prev-i" style="font-size:1.1rem"></i>
-            <span style="font-size:.78rem;flex:1" id="icon-prev-name">${cell.props?.icon||'— kein —'}</span>
+            ${cell.props?.icon
+              ? `<i class="mdi ${cell.props.icon.replace('mdi:','mdi-')}" id="icon-prev-i" style="font-size:1.1rem"></i>`
+              : `<i class="mdi mdi-image-off-outline" id="icon-prev-i" style="font-size:1.1rem;color:#444"></i>`}
+            <span style="font-size:.78rem;flex:1" id="icon-prev-name">${cell.props?.icon||'— kein Icon —'}</span>
             <span style="color:#555">▾</span>
           </button>
           <div class="icon-dropdown" id="icon-dropdown">
@@ -1118,8 +1120,8 @@ function onCmdChange(cmd){
   // Auto-fill Label wenn noch default
   if(!p.label||p.label==='Button'){setProp('label',cmd);const inp=document.querySelector('#props-content input[type=text]');if(inp)inp.value=cmd;}
   // Auto-fill Icon wenn noch leer
-  if(!p.icon){const ic=guessIcon(cmd);if(ic){setProp('icon',ic);const pi=document.getElementById('icon-prev-i');const pn=document.getElementById('icon-prev-name');if(pi)pi.className=`mdi ${ic.replace('mdi:','mdi-')}`;if(pn)pn.textContent=ic;}}
-  renderCmdList();renderCanvas();
+  if(!p.icon){const ic=guessIcon(cmd);if(ic){setProp('icon',ic);}}
+  renderCmdList();renderCanvas();renderProps();
 }
 
 // ── Icon-Picker ───────────────────────────────────────────────────────────
@@ -1147,11 +1149,8 @@ async function _doSearch(q){
 }
 function selectIcon(ic){
   setProp('icon',ic);
-  const pi=document.getElementById('icon-prev-i'),pn=document.getElementById('icon-prev-name');
-  if(pi)pi.className=`mdi ${ic.replace('mdi:','mdi-')}`;
-  if(pn)pn.textContent=ic;
   document.getElementById('icon-dropdown').classList.remove('open');
-  renderCanvas();
+  renderCmdList(); renderCanvas(); renderProps(); // Props sofort aktualisieren
 }
 // Klick außerhalb schließt Picker
 document.addEventListener('click',e=>{
