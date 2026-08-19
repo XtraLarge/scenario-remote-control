@@ -370,7 +370,7 @@ function renderCmdList() {
              onclick="quickAdd('${cmd}')"
              ondragstart="startCmdDrag(event,'${cmd}')"
              ondragend="_dragCmd=null;_dragType=null"
-             title="Klicken oder ziehen → Button platzieren">${cmd}</span>`
+             title="${cmd} — Klicken/Ziehen → in selektierte Reihe">${cmd}</span>`
     ).join('');
 }
 let _dragCmd = null;
@@ -387,22 +387,30 @@ function startCmdDrag(e, cmd) {
 function quickAdd(cmd) {
   if (!currentDevice) return;
   if (!sections.length) addSection();
-  const s = sections[sections.length-1];
-  if (!s.rows.length) s.rows.push({cells:[]});
+  // Selektierte Reihe bevorzugen; sonst letzte Section/Reihe
+  let si, ri;
+  if(selectedPath?.sectionIdx!=null && selectedPath?.rowIdx!=null
+     && sections[selectedPath.sectionIdx]?.rows[selectedPath.rowIdx]) {
+    si=selectedPath.sectionIdx; ri=selectedPath.rowIdx;
+  } else {
+    si=sections.length-1; ri=sections[si].rows.length-1;
+    if(ri<0){ sections[si].rows.push({cells:[]}); ri=0; }
+  }
   const gc = parseInt(document.getElementById('grid-cols').value||12);
-  let row = s.rows[s.rows.length-1];
+  let row = sections[si].rows[ri];
   migrateCols(row);
-  // Reihe voll? → neue Reihe
+  // Reihe voll? → neue Reihe in derselben Section
   const occ = occupiedCols(row);
   let full = true;
   for(let i=1;i<=gc;i++) if(!occ.has(i)){full=false;break;}
-  if(full){ s.rows.push({cells:[]}); row=s.rows[s.rows.length-1]; }
+  if(full){ sections[si].rows.push({cells:[]}); ri=sections[si].rows.length-1; row=sections[si].rows[ri]; }
   const col = firstFreeCol(row, gc, 1);
   row.cells.push({type:'button', props:{
     col, cols:1,
     name:`${currentDevice.id}_${cmd.replace(/\W/g,'_').toLowerCase()}`,
     label:cmd, icon:guessIcon(cmd), command:cmd, haptics:true, display:'both' }});
-  renderCmdList(); renderCanvas();
+  selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:row.cells.length-1};
+  renderCmdList(); renderCanvas(); renderProps();
 }
 
 // ── detectType ───────────────────────────────────────────────────────────
@@ -513,11 +521,18 @@ function addRow(si) {
 }
 function addCellToLast(type) {
   if(!sections.length) addSection();
-  const si=sections.length-1;
-  if(!sections[si].rows.length) sections[si].rows.push({cells:[]});
-  const ri=sections[si].rows.length-1;
+  // Selektierte Reihe bevorzugen — sonst letzte Section/letzte Reihe
+  let si, ri;
+  if(selectedPath?.sectionIdx!=null && selectedPath?.rowIdx!=null
+     && sections[selectedPath.sectionIdx]?.rows[selectedPath.rowIdx]) {
+    si=selectedPath.sectionIdx; ri=selectedPath.rowIdx;
+  } else {
+    si=sections.length-1;
+    if(!sections[si].rows.length) sections[si].rows.push({cells:[]});
+    ri=sections[si].rows.length-1;
+  }
   const gc=parseInt(document.getElementById('grid-cols').value||12);
-  migrateCols(sections[si].rows[ri]); // sicherstellen dass col-Props gesetzt sind
+  migrateCols(sections[si].rows[ri]);
   const col=firstFreeCol(sections[si].rows[ri], gc, defaultCols(type));
   const cell=makeCell(type, col);
   sections[si].rows[ri].cells.push(cell);
@@ -678,6 +693,7 @@ function renderCanvas() {
             if(cell.props?.background) el.style.background=cell.props.background;
           }
           if(cell.type==='stack') el.style.alignItems='flex-start';
+          el.title=cell.props?.label||cell.props?.command||cell.props?.name||cell.type; // Tooltip für lange Namen
           el.innerHTML=cellHtml(cell)+`<span class="cell-del" onclick="event.stopPropagation();removeCell(${si},${ri},${ci})">×</span>`;
           el.onclick=()=>selectCell(si,ri,ci);
 
@@ -709,11 +725,21 @@ function renderCanvas() {
               sections[si].rows[ri].cells.push(nc);
               selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
             } else if(_drag){
-              // Widget ↔ Widget: col-Positionen tauschen
-              const src=sections[_drag.si].rows[_drag.ri].cells[_drag.ci];
-              const tgt=sections[si].rows[ri].cells[ci];
-              const tmp=tgt.props.col; tgt.props.col=src.props.col; src.props.col=tmp;
-              selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci}; _drag=null;
+              if(_drag.si===si&&_drag.ri===ri){
+                // Gleiche Reihe: col-Positionen tauschen
+                const src=sections[_drag.si].rows[_drag.ri].cells[_drag.ci];
+                const tgt=sections[si].rows[ri].cells[ci];
+                const tmp=tgt.props.col; tgt.props.col=src.props.col; src.props.col=tmp;
+                selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci};
+              } else {
+                // Andere Reihe/Section: wirklich verschieben
+                const tgtCol=sections[si].rows[ri].cells[ci].props.col||1;
+                const [moved]=sections[_drag.si].rows[_drag.ri].cells.splice(_drag.ci,1);
+                moved.props.col=tgtCol;
+                sections[si].rows[ri].cells.push(moved);
+                selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:sections[si].rows[ri].cells.length-1};
+              }
+              _drag=null;
             }
             renderCmdList(); renderCanvas(); renderProps();
           });
