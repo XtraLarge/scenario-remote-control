@@ -365,19 +365,29 @@ def api_deploy():
             return jsonify({"error": "Lovelace Config nicht lesbar"}), 500
         config = cfg_r["result"]
 
-        # Views: eigene -gen Pfade ersetzen; fremde Pfade nie überschreiben
+        # Views: eigene -gen Pfade ersetzen; fremde Pfade NIE überschreiben
         existing = config.get("views", [])
         existing_paths = {v.get("path") for v in existing}
         new_paths = {nv.get("path") for nv in new_views}
-        # Konflikt nur bei Pfaden, die NICHT mit -gen enden (Nutzerdaten)
-        conflicts = [p for p in new_paths if p in existing_paths and not str(p).endswith("-gen")]
-        if conflicts:
+        # Harte Blockierung: Nicht-gen-Pfade dürfen NIE überschrieben werden
+        hard_conflicts = [p for p in new_paths if p in existing_paths and not str(p).endswith("-gen")]
+        if hard_conflicts:
             ws.close()
             return jsonify({
-                "error": f"Pfad-Konflikt: {conflicts} existiert bereits in Lovelace. "
-                         f"Bitte zuerst die alte Seite umbenennen oder löschen.",
-                "conflict_paths": conflicts
+                "error": f"Sicherheitssperre: Pfad {hard_conflicts} ist keine generierte View (-gen). "
+                         f"Manuell umbenennen oder löschen.",
+                "conflict_paths": hard_conflicts
             }), 409
+        # Weiche Bestätigung: -gen Views die bereits existieren → confirm_needed
+        force = data.get("force", False)
+        overwrite_views = [p for p in new_paths if p in existing_paths]
+        if overwrite_views and not force:
+            ws.close()
+            return jsonify({
+                "confirm_needed": True,
+                "overwrite_views": overwrite_views,
+                "message": f"Diese Views existieren bereits: {', '.join(overwrite_views)}. Überschreiben?"
+            }), 200
         # -gen Views ersetzen, alle anderen behalten
         config["views"] = [v for v in existing if v.get("path") not in new_paths] + new_views
 

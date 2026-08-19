@@ -218,14 +218,6 @@
     <div class="props">
       <div class="panel-title">Eigenschaften</div>
       <div id="props-content" style="color:#444;font-size:.8rem">Element auswählen…</div>
-      <!-- Szenarien: Namen & Icons -->
-      <div style="margin-bottom:14px">
-        <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Szenarien</div>
-        <div id="scenario-list" style="display:flex;flex-direction:column;gap:4px"></div>
-        <button class="btn" onclick="saveScenarios()" style="margin-top:6px;width:100%;font-size:.8rem">💾 Szenarien speichern</button>
-        <div id="sce-status" style="font-size:.75rem;margin-top:4px"></div>
-      </div>
-
       <!-- 🎨 Card-Style-Panel -->
       <div style="border-top:1px solid #2d3142;padding-top:10px;margin-top:10px">
         <div class="panel-title" style="cursor:pointer;user-select:none" onclick="toggleStylePanel()">
@@ -1228,7 +1220,7 @@ function exportLayout(){
               const a={type:'slider',name:wn,range:[p.min??0,p.max??100],step:p.step??1};
               if(p.vertical) a.vertical=true;
               if(p.entity)   a.entity=p.entity;
-              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ value | int }}'}};
+              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ "{{" }} value | int {{ "}}" }}'}};
               acts.push(a);} return;
           }
           rowRef.push(`${dev.id}_${cell.type}`);
@@ -1333,7 +1325,7 @@ function exportLayout(){
               const a={type:'slider',name:wn,range:[p.min??0,p.max??100],step:p.step??1};
               if(p.vertical) a.vertical=true;
               if(p.entity)   a.entity=p.entity;
-              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ value | int }}'}};
+              if(p.cmd) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.cmd,num_repeats:'{{ "{{" }} value | int {{ "}}" }}'}};
               acts.push(a);} return;
           }
           rowRef.push(`${dev.id}_${cell.type}`);
@@ -1661,14 +1653,21 @@ async function saveLayout(){
   }
 }
 
-async function deployRoom(){
+async function deployRoom(force=false){
   const st=document.getElementById('deploy-status');
   st.innerHTML='<span class="status info"><span class="spinner"></span> Deploye in HA…</span>';
   const r=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({room_id:ROOM_ID})});
+    body:JSON.stringify({room_id:ROOM_ID, force})});
   const d=await r.json();
-  st.innerHTML=d.ok?`<span class="status ok">✅ Deployed: ${d.views_deployed?.join(', ')||'ok'}</span>`
-                   :`<span class="status err">❌ ${d.error}</span>`;
+  // Server meldet: View existiert bereits → Nutzer fragen
+  if(d.confirm_needed){
+    const views=d.overwrite_views?.join(', ')||'?';
+    const ok=confirm(`⚠️ Diese Lovelace-View existiert bereits:\n\n${views}\n\nJetzt überschreiben?`);
+    if(!ok){ st.innerHTML='<span class="status info">Abgebrochen.</span>'; return; }
+    return deployRoom(true); // mit force=true erneut senden
+  }
+  if(d.error) st.innerHTML=`<span class="status err">❌ ${d.error}</span>`;
+  else st.innerHTML=`<span class="status ok">✅ Deployed: ${d.views_deployed?.join(', ')||'ok'}</span>`;
 }
 
 // Compat-Alias
@@ -1738,44 +1737,7 @@ function iconPickerSearch(q, preselect) {
   }, 250);
 }
 
-// ── Szenarien ──────────────────────────────────────────────────────────────
-let _scenarios = [];
-async function loadScenarios() {
-  const r = await fetch(`/api/scenarios/${ROOM_ID}`);
-  _scenarios = await r.json();
-  const list = document.getElementById('scenario-list');
-  list.innerHTML = '';
-  _scenarios.forEach((s,i) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:28px 1fr 1fr;gap:4px;align-items:center';
-    row.innerHTML = `
-      <i id="sce-icon-${i}" class="mdi ${(s.icon||'mdi:play-circle').replace('mdi:','mdi-')}"
-         style="color:#9c27b0;font-size:1.1rem;text-align:center;cursor:pointer"
-         title="${s.icon||'kein Icon'}"
-         onclick="openIconPicker(_scenarios[${i}].icon, v=>{ _scenarios[${i}].icon=v; document.getElementById('sce-icon-${i}').className='mdi '+v.replace('mdi:','mdi-'); document.getElementById('sce-icon-${i}').title=v; })"></i>
-      <input class="prop-input" style="font-size:.78rem" placeholder="${s.name}"
-             value="${s.label||''}"
-             oninput="_scenarios[${i}].label=this.value"
-             title="Anzeigename (leer = Kurzname)">
-      <button class="btn" style="font-size:.72rem;padding:2px 6px;white-space:nowrap"
-              onclick="openIconPicker(_scenarios[${i}].icon, v=>{ _scenarios[${i}].icon=v; document.getElementById('sce-icon-${i}').className='mdi '+v.replace('mdi:','mdi-'); document.getElementById('sce-icon-${i}').title=v; })">🎨 Symbol</button>
-    `;
-    list.appendChild(row);
-  });
-}
-async function saveScenarios() {
-  const st = document.getElementById('sce-status');
-  st.innerHTML = '<span class="status info">Speichere…</span>';
-  const r = await fetch(`/api/scenarios/${ROOM_ID}`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(_scenarios)
-  });
-  const d = await r.json();
-  st.innerHTML = d.ok ? '<span class="status ok">✅ Gespeichert</span>'
-                      : `<span class="status err">❌ ${d.stderr}</span>`;
-}
-
-document.addEventListener('DOMContentLoaded', () => { initPalette(); loadScenarios(); });
+document.addEventListener('DOMContentLoaded', () => { initPalette(); });
 </script>
 
 <!-- ── Icon-Picker Modal ──────────────────────────────────────────── -->

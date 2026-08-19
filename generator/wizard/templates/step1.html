@@ -617,13 +617,23 @@ async function deploy() {
   document.getElementById('deploy-btn').disabled = true;
   st.innerHTML = '<span><span class="spinner"></span> Deploye in HA Lovelace…</span>';
 
-  const res  = await fetch('/api/deploy', {
+  await doDeploy(_roomId, false);
+  document.getElementById('deploy-btn').disabled = false;
+}
+
+async function doDeploy(roomId, force) {
+  const st = document.getElementById('deploy-status');
+  const res = await fetch('/api/deploy', {
     method: 'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({room_id: _roomId})
+    body: JSON.stringify({room_id: roomId, force})
   });
   const data = await res.json();
-  document.getElementById('deploy-btn').disabled = false;
-
+  if (data.confirm_needed) {
+    const views = (data.overwrite_views||[]).join(', ');
+    const ok = confirm(`⚠️ Diese Lovelace-View existiert bereits:\n\n${views}\n\nJetzt überschreiben?`);
+    if (!ok) { st.innerHTML = '<span class="status info">Abgebrochen.</span>'; return; }
+    return doDeploy(roomId, true);
+  }
   if (data.ok) {
     st.innerHTML = `<span class="status ok">✅ Erfolgreich in HA übernommen! Views: ${(data.views_deployed||[]).join(', ')||'aktualisiert'}</span>`;
   } else {
