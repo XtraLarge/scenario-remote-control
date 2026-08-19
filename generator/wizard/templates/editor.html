@@ -1090,8 +1090,11 @@ function exportLayout(){
               const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
               const a={type:cell.type,name:wn,haptics:true};
               if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-              if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
-              if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
+              // circlepad: immer Chevron-Icons auf Richtungstasten
+              const _di=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
+              const mkd=(cmd,ic)=>{const r=mk(cmd);if(r&&ic)r.icon=ic;return r;};
+              if(p.up) a.up=mkd(p.up,_di.up); if(p.down) a.down=mkd(p.down,_di.down);
+              if(p.left) a.left=mkd(p.left,_di.left); if(p.right) a.right=mkd(p.right,_di.right);
               acts.push(a);}
             return;
           }
@@ -1162,8 +1165,11 @@ function exportLayout(){
               const mk=cmd=>cmd?{tap_action:{action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:cmd}},hold_action:{action:'repeat'}}:undefined;
               const a={type:cell.type,name:wn,haptics:true};
               if(p.ok) a.tap_action={action:'perform-action',perform_action:'remote.send_command',target:{entity_id:hubEnt},data:{device:devId,command:p.ok}};
-              if(p.up) a.up=mk(p.up); if(p.down) a.down=mk(p.down);
-              if(p.left) a.left=mk(p.left); if(p.right) a.right=mk(p.right);
+              // circlepad: immer Chevron-Icons auf Richtungstasten
+              const _di=cell.type==='circlepad'?{up:'mdi:chevron-up',down:'mdi:chevron-down',left:'mdi:chevron-left',right:'mdi:chevron-right'}:{};
+              const mkd=(cmd,ic)=>{const r=mk(cmd);if(r&&ic)r.icon=ic;return r;};
+              if(p.up) a.up=mkd(p.up,_di.up); if(p.down) a.down=mkd(p.down,_di.down);
+              if(p.left) a.left=mkd(p.left,_di.left); if(p.right) a.right=mkd(p.right,_di.right);
               acts.push(a);}
             return;
           }
