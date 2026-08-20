@@ -640,8 +640,6 @@ def _load_wizard_env():
     return env if "HA_URL" in env and "HA_TOKEN" in env else None
 
 if __name__ == "__main__":
-    print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
-    _confs = list_confs()
-    print(f"Harmony-Confs in {LOCAL}: {_confs or 'keine (bitte via /api/upload-conf hochladen)'}")
+    print(f"Wizard läuft — DATA: {LOCAL}  Port: 8777")
     app.run(host="0.0.0.0", port=8777, debug=False)
 

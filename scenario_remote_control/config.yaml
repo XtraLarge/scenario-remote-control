@@ -1,6 +1,6 @@
 ---
 name: "Scenario Remote Control"
-version: "0.1.9"
+version: "0.1.10"
 slug: "scenario_remote_control"
 description: >-
   Wizard for building Lovelace remote-control cards (universal-remote-card)
@@ -25,9 +25,6 @@ panel_title: "Remote Wizard"
 # HA API access (for Lovelace deployment via WebSocket)
 homeassistant_api: true
 
-# Read access to HA config dir (harmony .conf files)
-map:
-  - config:r
 
 options:
   log_level: info
