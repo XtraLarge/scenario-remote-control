@@ -1,6 +1,6 @@
 ---
 name: "Scenario Remote Control"
-version: "0.1.6"
+version: "0.1.7"
 slug: "scenario_remote_control"
 description: >-
   Wizard for building Lovelace remote-control cards (universal-remote-card)

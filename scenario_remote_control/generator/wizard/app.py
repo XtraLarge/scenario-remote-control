@@ -628,11 +628,12 @@ if __name__ == "__main__":
     import glob as _glob
     print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
     print(f"DATA_DIR={LOCAL}  CONF_DIR={CONF_DIR}")
-    for _d in [LOCAL, CONF_DIR, "/homeassistant", "/config", "/share"]:
+    for _d in [LOCAL, CONF_DIR, "/homeassistant", "/homeassistant_config", "/ha_config", "/config", "/share", "/media", "/ssl", "/addons"]:
         try:
             _files = _glob.glob(f"{_d}/harmony_*.conf")
-            print(f"  {_d}: {_files or os.listdir(_d)[:5] if os.path.isdir(_d) else 'not found'}")
+            print(f"  {_d}: {_files or os.listdir(_d)[:8] if os.path.isdir(_d) else 'not found'}")
         except Exception as _e:
             print(f"  {_d}: err={_e}")
+    print(f"  /root: {os.listdir('/')[:15]}")
     app.run(host="0.0.0.0", port=8777, debug=False)
 
