@@ -78,6 +78,21 @@ def hub_id_from_conf_name(filename):
     return filename.replace("harmony_","").replace(".conf","")
 
 # ── Routen ───────────────────────────────────────────────────────────────────
+
+@app.route("/api/upload-conf", methods=["POST"])
+def api_upload_conf():
+    """Harmony .conf-Datei hochladen → in /data/ speichern."""
+    if "file" not in request.files:
+        return jsonify({"error": "Kein File-Parameter"}), 400
+    f = request.files["file"]
+    if not f.filename or not f.filename.endswith(".conf"):
+        return jsonify({"error": "Nur .conf-Dateien erlaubt"}), 400
+    import re
+    safe_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", f.filename)
+    dest = os.path.join(LOCAL, safe_name)
+    f.save(dest)
+    return jsonify({"ok": True, "saved": safe_name})
+
 @app.route("/")
 def index():
     confs  = list_confs()
@@ -625,15 +640,8 @@ def _load_wizard_env():
     return env if "HA_URL" in env and "HA_TOKEN" in env else None
 
 if __name__ == "__main__":
-    import glob as _glob
     print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
-    print(f"DATA_DIR={LOCAL}  CONF_DIR={CONF_DIR}")
-    for _d in [LOCAL, CONF_DIR, "/homeassistant", "/homeassistant_config", "/ha_config", "/config", "/share", "/media", "/ssl", "/addons"]:
-        try:
-            _files = _glob.glob(f"{_d}/harmony_*.conf")
-            print(f"  {_d}: {_files or os.listdir(_d)[:8] if os.path.isdir(_d) else 'not found'}")
-        except Exception as _e:
-            print(f"  {_d}: err={_e}")
-    print(f"  /root: {os.listdir('/')[:15]}")
+    _confs = list_confs()
+    print(f"Harmony-Confs in {LOCAL}: {_confs or 'keine (bitte via /api/upload-conf hochladen)'}")
     app.run(host="0.0.0.0", port=8777, debug=False)
 
