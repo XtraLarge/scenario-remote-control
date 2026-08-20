@@ -1,6 +1,6 @@
 ---
 name: "Scenario Remote Control"
-version: "0.1.3"
+version: "0.1.4"
 slug: "scenario_remote_control"
 description: >-
   Wizard for building Lovelace remote-control cards (universal-remote-card)
@@ -27,7 +27,7 @@ homeassistant_api: true
 
 # Read access to HA config dir (harmony .conf files)
 map:
-  - config:r
+  - homeassistant_config:r
 
 options:
   log_level: info
