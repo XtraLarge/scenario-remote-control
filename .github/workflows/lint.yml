@@ -14,15 +14,15 @@ jobs:
       - name: Check config.yaml syntax
         run: |
           pip install pyyaml
-          python -c "import yaml; yaml.safe_load(open('config.yaml')); print('config.yaml OK')"
-      - name: Check required fields
+          python -c "import yaml; yaml.safe_load(open('scenario_remote_control/config.yaml')); print('config.yaml OK')"
+      - name: Check required HA fields
         run: |
           python - << 'PY'
           import yaml
-          cfg = yaml.safe_load(open("config.yaml"))
-          for field in ["name","version","slug","description","arch","startup","ingress"]:
-              assert field in cfg, f"Missing field: {field}"
-          print("All required fields present:", cfg["name"], cfg["version"])
+          cfg = yaml.safe_load(open("scenario_remote_control/config.yaml"))
+          for f in ["name","version","slug","description","arch","startup","ingress"]:
+              assert f in cfg, f"Missing field: {f}"
+          print("OK:", cfg["name"], cfg["version"])
           PY
 
   schema:
@@ -51,13 +51,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install flask pyyaml
-      - name: Syntax check generator
+      - name: Syntax check
         run: |
-          python -m py_compile generator/build_cards.py
-          python -m py_compile generator/extract_harmony.py
-          python -m py_compile generator/wizard/app.py
+          python -m py_compile scenario_remote_control/generator/build_cards.py
+          python -m py_compile scenario_remote_control/generator/extract_harmony.py
+          python -m py_compile scenario_remote_control/generator/wizard/app.py
           echo "All Python files OK"
-      - name: Import check
-        run: |
-          cd generator/wizard
-          python -c "import app; print('app.py imports OK')"

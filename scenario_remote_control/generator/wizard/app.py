@@ -11,7 +11,7 @@ import json, os, glob, subprocess, sys
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 # Pfade — ENV-Overrides für HA App Deployment, Fallback auf lokale Dev-Defaults
-REPO     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))  # scenario_remote_control/
 _DEV_LOC = os.path.join(REPO, "data", "local")
 LOCAL    = os.environ.get("DATA_DIR",   _DEV_LOC)          # /data  in HA App
 CONF_DIR = os.environ.get("CONF_DIR",   _DEV_LOC)          # /homeassistant (harmony .conf)
