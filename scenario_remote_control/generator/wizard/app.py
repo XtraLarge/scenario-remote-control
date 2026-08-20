@@ -90,7 +90,18 @@ def api_room_config(room_id):
     model_path = os.path.join(LOCAL, f"{room_id}.model.json")
     map_path   = os.path.join(LOCAL, f"{room_id}.map.json")
     if not os.path.exists(model_path):
-        return jsonify({"error": "Kein Modell gefunden"}), 404
+        # Kein gespeichertes Modell — frische Konfiguration starten
+        # Conf-Dateien für diesen Raum auto-suchen (nach room_id im Dateinamen)
+        confs = list_confs()
+        matching_conf = next((c for c in confs if room_id in c.lower()), confs[0] if confs else "")
+        return jsonify({
+            "room_id":    room_id,
+            "room_name":  room_id.upper(),
+            "hub_entity": "",
+            "conf_name":  matching_conf,
+            "roster":     {},
+            "fresh":      True,
+        })
     with open(model_path, encoding="utf-8") as f:
         model = json.load(f)
 
@@ -597,11 +608,16 @@ def api_save_card_style(room_id):
 
 
 def _load_wizard_env():
-    path = os.path.join(LOCAL, "wizard.env")
-    if not os.path.exists(path):
+    # In HA App: SUPERVISOR_TOKEN is auto-set, core accessible at http://supervisor/core
+    supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
+    if supervisor_token:
+        return {"HA_URL": "http://supervisor/core", "HA_TOKEN": supervisor_token}
+    # Dev fallback: wizard.env file
+    env_path = os.path.join(LOCAL, "wizard.env")
+    if not os.path.exists(env_path):
         return None
     env = {}
-    for line in open(path):
+    for line in open(env_path):
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
