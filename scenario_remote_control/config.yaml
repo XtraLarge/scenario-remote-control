@@ -1,6 +1,7 @@
 ---
 name: "Scenario Remote Control"
 version: "0.1.0"
+image: "ghcr.io/xtralarge/scenario-remote-control-{arch}"
 slug: "scenario_remote_control"
 description: >-
   Wizard for building Lovelace remote-control cards (universal-remote-card)
