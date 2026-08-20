@@ -533,8 +533,9 @@ def _rows_from_layout(raw_rows):
             out.append(r)
     return out
 
-def build_view(model, hub, overrides=None, layout=None, style_config=None):
+def build_view(model, hub, overrides=None, layout=None, style_config=None, view_path=None):
     hub_entity=hub["entity"]; hub_id=hub["id"]
+    _view_path=view_path or f"fb-{hub_id}-gen"
     dev_by_id={d["id"]:d for d in model["devices"]}
     seen_set=set()
     for s in model["scenarios"]:
@@ -615,7 +616,7 @@ def build_view(model, hub, overrides=None, layout=None, style_config=None):
         dev_sections.append({"type":"grid","columns":48,"rows":"auto","cards":[card]})
 
     return {"type":"sections","max_columns":4,
-            "title":hub["name"],"path":f"fb-{hub_id}-gen",
+            "title":hub["name"],"path":_view_path,
             "icon":"mdi:remote","subview":False,
             "sections":[scenario_section]+dev_sections}
 
@@ -640,9 +641,14 @@ def main():
     style_path = args.model.replace(".model.json", ".cardstyle.json")
     style_config = json.load(open(style_path, encoding="utf-8")) if os.path.exists(style_path) else {}
     if style_config: print(f"  Style-Preset: {style_config.get('preset','gradient')}")
+    # Meta (view_path, dashboard) aus <room>.meta.json
+    meta_path = args.model.replace(".model.json", ".meta.json")
+    meta = json.load(open(meta_path, encoding="utf-8")) if os.path.exists(meta_path) else {}
+    if meta: print(f"  Meta geladen: view_path={meta.get('view_path','default')}")
     views=[]
     for hub in model["hubs"]:
-        views.append(build_view(model,hub,overrides,layout=layout,style_config=style_config))
+        vp = meta.get("view_path") or None
+        views.append(build_view(model,hub,overrides,layout=layout,style_config=style_config,view_path=vp))
     os.makedirs(os.path.dirname(args.out),exist_ok=True)
     with open(args.out,"w",encoding="utf-8") as f:
         yaml.dump({"views":views},f,allow_unicode=True,sort_keys=False)

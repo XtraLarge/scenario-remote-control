@@ -359,7 +359,16 @@ def api_deploy():
             return jsonify({"error": "HA Auth fehlgeschlagen"}), 500
 
         # Aktuelle Config laden
-        ws.send(json.dumps({"id": 1, "type": "lovelace/config", "url_path": None}))
+        # Dashboard (url_path) aus meta.json
+        meta_path = os.path.join(LOCAL, f"{room_id}.meta.json")
+        dashboard_path = None
+        if os.path.exists(meta_path):
+            try:
+                _meta = json.load(open(meta_path, encoding="utf-8"))
+                dashboard_path = _meta.get("dashboard") or None
+            except Exception:
+                pass
+        ws.send(json.dumps({"id": 1, "type": "lovelace/config", "url_path": dashboard_path}))
         cfg_r = json.loads(ws.recv())
         if not cfg_r.get("success"):
             return jsonify({"error": "Lovelace Config nicht lesbar"}), 500
@@ -490,6 +499,39 @@ def save_scenarios(room_id):
     return jsonify({"ok": r.returncode == 0, "stderr": r.stderr[:200]})
 
 
+
+
+@app.route("/api/meta/<room_id>", methods=["GET"])
+def api_meta_get(room_id):
+    """Deployment-Meta lesen (view_path, dashboard)."""
+    meta_path = os.path.join(LOCAL, f"{room_id}.meta.json")
+    defaults = {"view_path": f"fb-{room_id}-gen", "dashboard": ""}
+    if os.path.exists(meta_path):
+        try:
+            data = json.load(open(meta_path, encoding="utf-8"))
+            defaults.update(data)
+        except Exception:
+            pass
+    return jsonify(defaults)
+
+@app.route("/api/meta/<room_id>", methods=["POST"])
+def api_meta_save(room_id):
+    """Deployment-Meta speichern (view_path, dashboard)."""
+    data = request.json or {}
+    meta_path = os.path.join(LOCAL, f"{room_id}.meta.json")
+    allowed = {k: data[k] for k in ("view_path", "dashboard") if k in data}
+    if not allowed:
+        return jsonify({"error": "Keine Felder"}), 400
+    existing = {}
+    if os.path.exists(meta_path):
+        try:
+            existing = json.load(open(meta_path, encoding="utf-8"))
+        except Exception:
+            pass
+    existing.update(allowed)
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2, ensure_ascii=False)
+    return jsonify({"ok": True})
 
 @app.route("/api/device-accent/<room_id>/<device_id>", methods=["POST"])
 def api_set_device_accent(room_id, device_id):
