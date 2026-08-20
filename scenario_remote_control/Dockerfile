@@ -6,7 +6,7 @@ COPY generator/wizard/requirements.txt ./requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
 COPY generator/ ./generator/
-COPY run.sh /run.sh
-RUN chmod a+x /run.sh
 
-CMD ["/run.sh"]
+# s6-overlay v3 service definition
+COPY rootfs/ /
+RUN chmod a+x /etc/s6-overlay/s6-rc.d/scenario_remote_control/run
