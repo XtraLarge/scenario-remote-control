@@ -11,12 +11,15 @@ import json, os, glob, subprocess, sys
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 # Pfade — ENV-Overrides für HA App Deployment, Fallback auf lokale Dev-Defaults
-REPO     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))  # scenario_remote_control/
-_DEV_LOC = os.path.join(REPO, "data", "local")
-LOCAL    = os.environ.get("DATA_DIR",   _DEV_LOC)          # /data  in HA App
-CONF_DIR = os.environ.get("CONF_DIR",   _DEV_LOC)          # /homeassistant (harmony .conf)
+# In HA: app.py liegt in /app/generator/wizard/ → REPO=/app (zwei Ebenen hoch)
+# In Dev: app.py liegt in scenario_remote_control/generator/wizard/ → Repo-Root drei Ebenen hoch
+REPO       = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+_DEV_LOC   = os.path.join(_REPO_ROOT, "data", "local")   # dev: Repo-Root/data/local
+LOCAL    = os.environ.get("DATA_DIR",   _DEV_LOC)         # /data  in HA App
+CONF_DIR = os.environ.get("CONF_DIR",   _DEV_LOC)         # /homeassistant (harmony .conf)
 GEN      = os.environ.get("GEN_DIR",    os.path.join(REPO, "generator"))
-CARDS    = os.environ.get("CARDS_DIR",  os.path.join(REPO, "cards", "local"))
+CARDS    = os.environ.get("CARDS_DIR",  os.path.join(_REPO_ROOT, "cards", "local"))
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
