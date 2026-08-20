@@ -625,6 +625,14 @@ def _load_wizard_env():
     return env if "HA_URL" in env and "HA_TOKEN" in env else None
 
 if __name__ == "__main__":
+    import glob as _glob
     print(f"Wizard läuft auf http://0.0.0.0:8777  (Repo: {REPO})")
+    print(f"DATA_DIR={LOCAL}  CONF_DIR={CONF_DIR}")
+    for _d in [LOCAL, CONF_DIR, "/homeassistant", "/config", "/share"]:
+        try:
+            _files = _glob.glob(f"{_d}/harmony_*.conf")
+            print(f"  {_d}: {_files or os.listdir(_d)[:5] if os.path.isdir(_d) else 'not found'}")
+        except Exception as _e:
+            print(f"  {_d}: err={_e}")
     app.run(host="0.0.0.0", port=8777, debug=False)
 
