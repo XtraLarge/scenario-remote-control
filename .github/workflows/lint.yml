@@ -1,15 +1,63 @@
-name: lint
-on: [push, pull_request]
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
 jobs:
-  yaml:
+  addon-config:
+    name: Validate Add-on config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: yamllint
+      - name: Check config.yaml syntax
         run: |
-          pipx install yamllint || pip install yamllint
-          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' . || true
-      - name: validate example against schema
+          pip install pyyaml
+          python -c "import yaml; yaml.safe_load(open('config.yaml')); print('config.yaml OK')"
+      - name: Check required fields
         run: |
-          pip install jsonschema
-          python -c "import json,jsonschema; jsonschema.validate(json.load(open('data/example/model.example.json')), json.load(open('data/model.schema.json'))); print('example valid')"
+          python - << 'PY'
+          import yaml
+          cfg = yaml.safe_load(open("config.yaml"))
+          for field in ["name","version","slug","description","arch","startup","ingress"]:
+              assert field in cfg, f"Missing field: {field}"
+          print("All required fields present:", cfg["name"], cfg["version"])
+          PY
+
+  schema:
+    name: Validate data schema + example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install jsonschema
+      - name: Validate example model
+        run: |
+          python -c "
+          import json,jsonschema
+          jsonschema.validate(
+            json.load(open('data/example/model.example.json')),
+            json.load(open('data/model.schema.json'))
+          )
+          print('example model valid')
+          "
+
+  python:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install flask pyyaml
+      - name: Syntax check generator
+        run: |
+          python -m py_compile generator/build_cards.py
+          python -m py_compile generator/extract_harmony.py
+          python -m py_compile generator/wizard/app.py
+          echo "All Python files OK"
+      - name: Import check
+        run: |
+          cd generator/wizard
+          python -c "import app; print('app.py imports OK')"

@@ -10,17 +10,37 @@ Läuft auf Manage; per HA panel_iframe einbindbar.
 import json, os, glob, subprocess, sys
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
-# Pfade relativ zum Repo-Root (zwei Ebenen über wizard/)
-REPO   = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-LOCAL  = os.path.join(REPO, "data", "local")
-GEN    = os.path.join(REPO, "generator")
-CARDS  = os.path.join(REPO, "cards", "local")
+# Pfade — ENV-Overrides für HA App Deployment, Fallback auf lokale Dev-Defaults
+REPO     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_DEV_LOC = os.path.join(REPO, "data", "local")
+LOCAL    = os.environ.get("DATA_DIR",   _DEV_LOC)          # /data  in HA App
+CONF_DIR = os.environ.get("CONF_DIR",   _DEV_LOC)          # /homeassistant (harmony .conf)
+GEN      = os.environ.get("GEN_DIR",    os.path.join(REPO, "generator"))
+CARDS    = os.environ.get("CARDS_DIR",  os.path.join(REPO, "cards", "local"))
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 # ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 def list_confs():
-    return sorted(os.path.basename(f) for f in glob.glob(os.path.join(LOCAL, "harmony_*.conf")))
+    # Harmony .conf files: from user data dir AND HA config dir (if Add-on)
+    dirs = {LOCAL}
+    if CONF_DIR != LOCAL:
+        dirs.add(CONF_DIR)
+    files = set()
+    for d in dirs:
+        files.update(os.path.basename(f) for f in glob.glob(os.path.join(d, "harmony_*.conf")))
+    return sorted(files)
+
+
+def find_conf_path(filename):
+    p = os.path.join(LOCAL, filename)
+    if os.path.exists(p):
+        return p
+    if CONF_DIR != LOCAL:
+        p2 = os.path.join(CONF_DIR, filename)
+        if os.path.exists(p2):
+            return p2
+    return p
 
 def list_configured_rooms():
     """Bereits konfigurierte Räume aus data/local/*.model.json."""
@@ -221,7 +241,7 @@ def api_generate():
         json.dump(full_map, f, indent=2, ensure_ascii=False)
 
     # extract_harmony.py ausführen
-    conf_path = os.path.join(LOCAL, conf_name)
+    conf_path = find_conf_path(conf_name)
     r1 = subprocess.run(
         [sys.executable, os.path.join(GEN, "extract_harmony.py"),
          "--conf", conf_path, "--map", map_path, "--out", model_path],

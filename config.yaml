@@ -1,0 +1,36 @@
+---
+name: "Scenario Remote Control"
+version: "0.1.0"
+slug: "scenario_remote_control"
+description: >-
+  Wizard for building Lovelace remote-control cards (universal-remote-card)
+  from Harmony, Broadlink, ESPHome-IR and other backends.
+  Configure activities, devices and layouts via a visual editor — no YAML hand-coding.
+url: "https://github.com/XtraLarge/scenario-remote-control"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: services
+boot: auto
+
+# Ingress: accessible via HA sidebar without port forwarding
+ingress: true
+ingress_port: 8777
+panel_icon: mdi:remote
+panel_title: "Remote Wizard"
+
+# HA API access (for Lovelace deployment via WebSocket)
+homeassistant_api: true
+
+# Read access to HA config dir (harmony .conf files)
+map:
+  - config:r
+
+options:
+  log_level: info
+
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
