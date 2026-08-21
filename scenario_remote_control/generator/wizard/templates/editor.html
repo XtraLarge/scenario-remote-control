@@ -432,6 +432,11 @@ async function loadDevice(devId) {
   const saved = await loadSavedLayout(devId);
   if (saved) {
     sections = saved;
+    // _cellSeq aus geladenen Namen synchronisieren (verhindert Counter-Kollision nach Reload)
+    { const nums=saved.flatMap(s=>s.rows||[]).flatMap(r=>r.cells||[])
+        .map(c=>c.props?.name).filter(Boolean)
+        .map(n=>{const m=/btn(\d+)$/.exec(n);return m?+m[1]:0;});
+      if(nums.length) _cellSeq=Math.max(_cellSeq,...nums); }
     document.getElementById('saved-indicator').style.display = 'inline-flex';
   } else {
     sections = buildDefaultLayout(currentDevice);
@@ -687,7 +692,7 @@ function defaultCols(type){
 function makeCell(type, col) {
   const id=currentDevice?.id||'dev';
   const c=col||1;
-  if(type==='button')    return {type,props:{col:c,cols:1,name:`${id}_btn`,label:'Button',icon:'',command:'',haptics:true,display:'both'}};
+  if(type==='button')    return {type,props:{col:c,cols:1,name:`${id}_btn${++_cellSeq}`,label:'Button',icon:'',command:'',haptics:true,display:'both'}};
   if(type==='spacer')    return {type,props:{col:c,cols:1}};
   if(type==='stack')     return {type,cells:[],props:{col:c,cols:1}};
   if(type==='circlepad') return {type,props:{col:c,cols:3,up:'DirectionUp',down:'DirectionDown',left:'DirectionLeft',right:'DirectionRight',ok:'OK'}};
@@ -718,6 +723,7 @@ function selectCell(si,ri,ci) { selectedPath={sectionIdx:si,rowIdx:ri,cellIdx:ci
 // ── Canvas rendern (Matrix-Grid mit freier Platzierung) ──────────────────────
 let _drag = null;
 let _dragType = null;
+let _cellSeq = 0; // URC-Button-Name-Counter (verhindert Namens-Kollision)
 
 
 function initPalette() {
@@ -743,6 +749,7 @@ function renderCanvas() {
     cv.innerHTML='<div class="canvas-empty">← Gerät wählen<br><br>Gespeichertes Layout wird automatisch geladen.</div>'; return;
   }
   cv.innerHTML = '';
+  const _cw=document.createElement('div'); _cw.style.cssText='max-width:520px;margin:0 auto;width:100%';
 
   sections.forEach((sec, si) => {
     const sb = document.createElement('div'); sb.className='section-block';
@@ -907,8 +914,9 @@ function renderCanvas() {
       }
       wrap.appendChild(grid); sb.appendChild(wrap);
     });
-    cv.appendChild(sb);
+    _cw.appendChild(sb);
   });
+  cv.appendChild(_cw);
 }
 function cellHtml(cell) {
   const t=cell.type;
@@ -1013,6 +1021,9 @@ function renderProps() {
         <select class="prop-input" onchange="onCmdChange(this.value)">${cmdOpts}</select></div>
       <div class="prop-group"><label class="prop-label">Label / Text <span style="font-size:.65rem;color:#555;font-weight:400">(oder Doppelklick auf Zelle)</span></label>
         <input class="prop-input" type="text" value="${esc(cell.props?.label||'')}" oninput="setProp('label',this.value);renderCanvas()"></div>
+      <div class="prop-group"><label class="prop-label">URC Name <span style="font-size:.63rem;color:#4a5060;font-weight:400" title="Eindeutige ID in URC custom_actions — gleicher Name = gleiche Aktion">⚿ ID</span></label>
+        <input class="prop-input" type="text" value="${esc(cell.props?.name||'')}" placeholder="${currentDevice?.id||'dev'}_…"
+               oninput="setProp('name',this.value)" style="font-family:monospace;font-size:.75rem;color:#90caf9"></div>
       <div class="prop-group"><label class="prop-label">Icon (MDI)</label>
         <div class="icon-picker">
           <div style="display:flex;gap:4px;align-items:stretch">
@@ -1249,6 +1260,12 @@ function onCmdChange(cmd){
   if(!p.label||p.label==='Button'){setProp('label',cmd);const inp=document.querySelector('#props-content input[type=text]');if(inp)inp.value=cmd;}
   // Auto-fill Icon wenn noch leer
   if(!p.icon){const ic=guessIcon(cmd);if(ic){setProp('icon',ic);}}
+  // Auto-update name: generischer _btnN → command-Slug (vermeidet Kollision, erhält benutzerdef. Namen)
+  const _devId=currentDevice?.id||'dev';
+  if(cmd && p.name && /^[^_]+_btn\d+$/.test(p.name)){
+    const _sl=cmd.replace(/[^a-zA-Z0-9]+/g,'_').toLowerCase().replace(/^_+|_+$/g,'');
+    if(_sl) setProp('name',`${_devId}_${_sl}`);
+  }
   renderCmdList();renderCanvas();renderProps();
 }
 
@@ -1551,7 +1568,7 @@ function addSubCell(type){
   if(!cell||cell.type!=='stack') return;
   if(!cell.cells) cell.cells=[];
   const id=currentDevice?.id||'dev';
-  if(type==='button') cell.cells.push({type:'button',props:{name:`${id}_stk_btn`,label:'Button',icon:'',command:'',haptics:true,display:'both'}});
+  if(type==='button') cell.cells.push({type:'button',props:{name:`${id}_stk_btn${++_cellSeq}`,label:'Button',icon:'',command:'',haptics:true,display:'both'}});
   else                cell.cells.push({type:'spacer',props:{}});
   renderCanvas(); renderProps();
 }
