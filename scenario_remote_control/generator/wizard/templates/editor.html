@@ -322,7 +322,17 @@
         <!-- ── Aktions-Buttons ────────────────────────────────────────── -->
         <div style="display:flex;gap:6px;margin-bottom:4px">
           <button class="btn btn-primary" onclick="saveLayout()" style="flex:1" id="btn-save" disabled title="Gerät wählen um zu speichern">💾 Speichern</button>
-          <button class="btn btn-primary" onclick="deployRoom()" style="flex:1">🚀 Deployen</button>
+          <button class="btn btn-primary" onclick="deployRoom()" style="flex:1" title="Bestehende Karte ohne Neu-Generierung deployen">🚀 Deployen</button>
+        </div>
+        <div style="margin-bottom:4px">
+          <button class="btn btn-primary" onclick="rebuildAndDeploy()"
+            style="width:100%;background:linear-gradient(135deg,#1a5276,#0d6efd)"
+            title="Alle gespeicherten Layouts neu bauen → Karte generieren → in HA deployen">
+            🔨 Bauen + Deployen
+          </button>
+          <div style="font-size:.6rem;color:#555;margin-top:2px;text-align:center">
+            Layouts neu einbauen → Karte generieren → HA deployen (empfohlen nach Änderungen)
+          </div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:4px">
           <button class="btn" onclick="exportFB()" style="flex:1" id="btn-export" disabled title="Gerät wählen">📤 Exportieren</button>
@@ -1860,6 +1870,22 @@ async function saveLayout(){
   } else {
     st.innerHTML=`<span class="status err">❌ ${d.error||''}</span>`;
   }
+}
+
+async function rebuildAndDeploy(){
+  const st=document.getElementById('deploy-status');
+  // 1) Layout aller Geräte speichern (falls dirty)
+  await saveLayout();
+  // 2) Karte aus Modell + Layouts neu bauen
+  st.innerHTML='<span class="status info"><span class="spinner"></span> Baue Karte aus gespeicherten Layouts…</span>';
+  try {
+    const rb=await fetch(`/api/rebuild/${ROOM_ID}`,{method:'POST'});
+    const rd=await rb.json();
+    if(!rd.ok){ st.innerHTML=`<span class="status err">❌ Build-Fehler: ${rd.error||rd.detail||'?'}</span>`; return; }
+    st.innerHTML=`<span class="status ok">✅ Karte gebaut (${rd.devices} Geräte, ${rd.scenarios} Szenarien) — deploye…</span>`;
+  } catch(e){ st.innerHTML=`<span class="status err">❌ Build-Ausnahme: ${e.message}</span>`; return; }
+  // 3) Deployen
+  await deployRoom();
 }
 
 async function deployRoom(force=false){

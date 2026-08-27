@@ -507,6 +507,31 @@ def api_save_layout():
     )
     return jsonify({"ok": r.returncode == 0, "stdout": r.stdout.strip(), "stderr": r.stderr[:300]})
 
+
+@app.route("/api/rebuild/<room_id>", methods=["POST"])
+def api_rebuild(room_id):
+    """Karte aus bestehendem Modell + Layouts neu bauen (build_cards.py re-run).
+    Nutzt wz.model.json + wz.layout.json aus LOCAL — kein erneutes Parsen der .conf nötig."""
+    model_path = os.path.join(LOCAL, f"{room_id}.model.json")
+    if not os.path.exists(model_path):
+        return jsonify({"error": "Modell nicht gefunden — bitte zuerst über Schritt 1 generieren"}), 404
+    card_path = os.path.join(CARDS, f"{room_id}.yaml")
+    os.makedirs(CARDS, exist_ok=True)
+    r = subprocess.run(
+        [sys.executable, os.path.join(GEN, "build_cards.py"),
+         "--model", model_path, "--out", card_path],
+        capture_output=True, text=True, cwd=REPO)
+    if r.returncode != 0:
+        return jsonify({"error": "build_cards fehlgeschlagen", "detail": r.stderr[:500]}), 500
+    model = json.load(open(model_path, encoding="utf-8"))
+    return jsonify({
+        "ok":       True,
+        "card_path": card_path,
+        "devices":  len(model["devices"]),
+        "scenarios": len(model["scenarios"]),
+        "stdout":   r.stdout.strip(),
+    })
+
 @app.route("/api/scenarios/<room_id>", methods=["GET"])
 def get_scenarios(room_id):
     """Szenario-Konfiguration lesen (Labels + Icons)."""
